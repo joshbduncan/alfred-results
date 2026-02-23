@@ -30,13 +30,13 @@ from contextlib import contextmanager
 from json import dumps
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
-from uuid import NAMESPACE_URL, uuid5
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Sequence
 
 from . import _get_version
 from .result_item import Icon, IconResourceType, ItemType, Mod, ResultItem
+from .utils import path_to_uuid
 
 
 @contextmanager
@@ -238,23 +238,6 @@ def create_parser() -> argparse.ArgumentParser:
     )
 
     return parser
-
-
-def path_to_uuid(path: str) -> str:
-    """Derive a stable UUID v5 from a canonical path string.
-
-    Uses the URL namespace so that the same absolute path always produces
-    the same UUID, giving Alfred a stable ``uid`` to track selection history
-    across workflow invocations.
-
-    Args:
-        path: A canonical (expanded, resolved) path string.
-
-    Returns:
-        A UUID v5 string in the standard ``xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx``
-        format.
-    """
-    return str(uuid5(NAMESPACE_URL, path))
 
 
 def main(argv: Sequence[str] | None = None) -> int:
