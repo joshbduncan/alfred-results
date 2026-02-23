@@ -1,3 +1,19 @@
+"""
+icon
+----
+Alfred Script Filter icon types.
+
+Defines :class:`IconResourceType` (how Alfred resolves the icon path) and
+:class:`Icon` (the ``"icon"`` sub-object in a Script Filter result item or
+modifier payload).
+
+Alfred icon JSON examples::
+
+    {"icon": {"path": "./custom_icon.png"}}
+    {"icon": {"type": "fileicon", "path": "~/Desktop"}}
+    {"icon": {"type": "filetype", "path": "com.apple.rtfd"}}
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -6,16 +22,18 @@ from typing import Any
 
 
 class IconResourceType(StrEnum):
-    """
-    Alfred icon resource type.
+    """How Alfred resolves the ``path`` field of an :class:`Icon`.
 
-    Determines how Alfred resolves the `path` value in an item's `icon` object.
+    When omitted, Alfred treats the path as a relative path from the workflow
+    bundle root pointing to an image file (PNG, ICNS, etc.).
 
-    Members:
-        FILEICON: Treat `path` as a filesystem path and display that file or
-            folder’s native macOS icon.
-        FILETYPE: Treat `path` as a Uniform Type Identifier (UTI) and display
-            the system icon for that file type.
+    Attributes:
+        FILEICON: Display the native macOS icon of the file or folder at
+            ``path``.  Useful for showing a folder's Finder icon or an
+            application's dock icon.
+        FILETYPE: Display the system icon for the Uniform Type Identifier
+            (UTI) given in ``path`` (e.g. ``"com.apple.rtfd"`` for an
+            RTFD document).
     """
 
     FILEICON = "fileicon"
@@ -24,50 +42,64 @@ class IconResourceType(StrEnum):
 
 @dataclass(slots=True)
 class Icon:
-    """
-    Alfred Script Filter `icon` payload.
+    """Alfred Script Filter ``icon`` payload.
 
-    Represents the optional `icon` object attached to a Script Filter result
-    item. If `path` is not provided, the icon is considered unset and should be
-    omitted from the final JSON entirely.
-
-    Alfred spec examples:
-
-        {"icon": {"path": "./custom_icon.png"}}
-        {"icon": {"type": "fileicon", "path": "~/Desktop"}}
-        {"icon": {"type": "filetype", "path": "com.apple.rtfd"}}
+    Represents the optional ``"icon"`` object attached to a Script Filter
+    result item or modifier entry.  When ``path`` is ``None`` the icon is
+    considered unset and :meth:`to_alfred` returns ``None``, signalling the
+    caller to omit the key entirely.
 
     Attributes:
-        path: Path or identifier describing the icon resource.
-            • Relative path from the workflow root when `resource_type` is None.
-            • Filesystem path when `resource_type` is FILEICON.
-            • UTI string when `resource_type` is FILETYPE.
+        path: The icon resource path or identifier.
+
+            * ``None`` — no icon; :meth:`to_alfred` returns ``None``.
+            * Relative filesystem path (from the workflow bundle root) when
+              ``resource_type`` is ``None``.
+            * Absolute or ``~``-prefixed filesystem path when
+              ``resource_type`` is :attr:`IconResourceType.FILEICON`.
+            * UTI string (e.g. ``"com.apple.rtfd"``) when ``resource_type``
+              is :attr:`IconResourceType.FILETYPE`.
+
         resource_type: Optional modifier that changes how Alfred interprets
-            `path`. Must not be set without `path`.
+            ``path``.  Must be ``None`` when ``path`` is ``None``; setting it
+            without a path raises :exc:`ValueError` in :meth:`to_alfred`.
+
+    Example::
+
+        # Use the Finder icon of the matched file
+        icon = Icon(path="/Users/me/Documents", resource_type=IconResourceType.FILEICON)
+
+        # Custom PNG bundled with the workflow
+        icon = Icon(path="./icons/custom.png")
+
+        # No icon (omitted from JSON)
+        icon = Icon()
     """
 
     path: str | None = None
     resource_type: IconResourceType | None = None
 
     def to_alfred(self) -> dict[str, Any] | None:
-        """
-        Serialize this icon to Alfred's `icon` object shape.
+        """Serialize to Alfred's ``icon`` object shape.
+
+        Produces the dict that is assigned to the ``"icon"`` key of a result
+        item or modifier payload.  Returns ``None`` when no icon is defined so
+        callers can gate inclusion with a simple truthiness check.
 
         Returns:
-            A dict suitable for assigning to an item's `"icon"` key, or None if
-            no icon is defined.
+            ``{"path": path}`` when only ``path`` is set.
+            ``{"type": "<resource_type>", "path": path}`` when both fields
+            are set.
+            ``None`` when ``path`` is ``None`` (icon should be omitted).
 
         Raises:
-            ValueError: If `resource_type` is set but `path` is None.
+            ValueError: If ``resource_type`` is set but ``path`` is ``None``.
 
-        Serialization rules:
-            • path only → {"path": path}
-            • path + resource_type → {"type": "...", "path": path}
-            • no path → None (caller should omit `"icon"`)
+        Example::
 
-        Notes:
-            The enum is converted to its string value to match Alfred's JSON
-            schema exactly.
+            icon = Icon(path="~/Desktop", resource_type=IconResourceType.FILEICON)
+            icon.to_alfred()
+            # {"type": "fileicon", "path": "~/Desktop"}
         """
         if self.path is None:
             if self.resource_type is not None:
