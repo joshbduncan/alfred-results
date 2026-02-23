@@ -279,8 +279,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.input == "-" and sys.stdin.isatty():
         parser.error("no stdin provided")
 
+    paths: list[str] = []
     try:
-        paths: list[str] = parse_input(args.input)
+        paths = parse_input(args.input)
     except OSError as e:
         parser.error(f"can't open '{args.input}': {e.strerror}")
 
@@ -291,8 +292,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     session_vars = parse_session_vars(args.session_var)
 
     # process modifiers
+    mods: list[Mod] = []
     try:
-        mods: list[Mod] = parse_mods(args.mod) if args.mod is not None else []
+        mods = parse_mods(args.mod) if args.mod is not None else []
     except ValueError as e:
         parser.error(str(e))
 
@@ -302,13 +304,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         p = Path(i)
         icon = Icon(path=str(p), resource_type=IconResourceType.FILEICON)
 
+        result_variables: dict[str, str] = {"_path": p.as_posix()}
         if args.result_var is not None:
             try:
                 result_variables = parse_result_vars(p, args.result_var)
             except AttributeError as e:
                 parser.error(str(e))
-        else:
-            result_variables = {"_path": p.as_posix()}
 
         item = ResultItem(
             uid=path_to_uuid(str(p.expanduser().resolve())),
