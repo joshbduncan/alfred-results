@@ -27,7 +27,6 @@ from __future__ import annotations
 import argparse
 import sys
 from contextlib import contextmanager
-from importlib.metadata import version
 from json import dumps
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -36,6 +35,7 @@ from uuid import NAMESPACE_URL, uuid5
 if TYPE_CHECKING:
     from collections.abc import Generator, Sequence
 
+from . import _get_version
 from .result_item import Icon, IconResourceType, ItemType, Mod, ResultItem
 
 
@@ -223,7 +223,7 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--version",
         action="version",
-        version=f"%(prog)s {version('alfred-path-results')}",
+        version=f"%(prog)s {_get_version()}",
     )
 
     return parser
