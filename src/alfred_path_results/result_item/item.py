@@ -1,3 +1,25 @@
+"""
+item
+----
+Alfred Script Filter result item types.
+
+Defines :class:`ItemType` (how Alfred treats a result row) and
+:class:`ResultItem` (a single entry in Alfred's ``"items"`` array).
+
+Minimal Script Filter JSON example::
+
+    {
+        "items": [
+            {
+                "title": "My Result",
+                "subtitle": "A description",
+                "arg": "/path/to/file",
+                "uid": "some-stable-uid"
+            }
+        ]
+    }
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -13,12 +35,16 @@ if TYPE_CHECKING:
 
 
 class ItemType(StrEnum):
-    """
-    Alfred Script Filter item `type`.
+    """How Alfred treats a result row.
 
-    DEFAULT: Standard result row.
-    FILE: Treat result as a file (Alfred checks existence).
-    FILE_SKIPCHECK: Treat as file but skip existence check.
+    Attributes:
+        DEFAULT: A standard, non-file result row.  Alfred performs no
+            filesystem existence check.
+        FILE: Alfred treats the result as a file path.  Alfred verifies
+            that the path exists before displaying the item; items pointing
+            to non-existent paths are hidden.
+        FILE_SKIPCHECK: Same as :attr:`FILE` but Alfred skips the existence
+            check.  Useful for items that represent virtual or remote paths.
     """
 
     DEFAULT = "default"
@@ -28,20 +54,67 @@ class ItemType(StrEnum):
 
 @dataclass(slots=True)
 class ResultItem:
-    """
-    One result row in Alfred's Script Filter `items` array.
+    """A single row in Alfred's Script Filter ``items`` array.
 
-    Required:
-        title
+    Only :attr:`title` is required by Alfred's schema.  All other fields are
+    optional; unset fields (``None``) are omitted from the serialised JSON
+    produced by :meth:`to_alfred`.
 
-    Recommended:
-        arg, autocomplete
+    Attributes:
+        title: The primary text shown in the Alfred result row.  Must be a
+            non-empty, non-whitespace string.
+        subtitle: Secondary text shown below the title in the result row.
+        uid: A stable, unique identifier for this result.  When set, Alfred
+            learns from the user's selection history and may reorder results
+            accordingly.  Should be consistent across invocations for the
+            same logical item (e.g. a UUID derived from the file path).
+        arg: The argument passed to the next action in Alfred's workflow when
+            this item is actioned.  Accepts either a single string or a list
+            of strings (see :data:`~alfred_path_results.result_item.ArgValue`).
+        valid: Controls whether the item can be actioned.  ``True`` (default
+            when omitted) allows actioning; ``False`` turns the item into a
+            non-actionable label row (useful for section headers or error
+            messages).
+        autocomplete: The string inserted into Alfred's search field when the
+            user presses Tab on this item.  Useful for building hierarchical
+            navigation.
+        match: A custom string used for Alfred's filtering when the Script
+            Filter is configured with Alfred's built-in matching.  Defaults to
+            the title when not set.
+        type: Controls how Alfred categorises this result; see
+            :class:`ItemType`.  Omit to use Alfred's default behaviour.
+        icon: The icon displayed next to the result row; see
+            :class:`~alfred_path_results.result_item.Icon`.
+        mods: A list of :class:`~alfred_path_results.result_item.Mod`
+            instances that override the item's behaviour when the user holds a
+            modifier key (cmd, alt, ctrl, shift, fn, or combinations).
+        action: The Universal Action payload passed to Alfred when the item is
+            actioned via Universal Actions.  Can be a string, a list of
+            strings, or a typed mapping (``{"file": [...], "url": [...]}``)
+            following Alfred's Universal Actions schema.
+        text: Copy/paste and Large Type overrides.  Expected keys are
+            ``"copy"`` (text placed on the clipboard) and ``"largetype"``
+            (text displayed in Large Type mode).
+        quicklookurl: URL or file path opened when the user invokes Quick Look
+            on this result (Shift or Cmd+Y).
+        variables: Item-scoped Alfred session variables.  These are merged
+            into Alfred's environment when this item is actioned and are
+            available to downstream workflow objects.
 
-    Notes:
-        - If `uid` is set, Alfred may reorder results based on usage.
-        - `valid=False` prevents actioning while still displaying.
-        - `mods` allows modifier overrides.
-        - `variables` are item-scoped session variables.
+    Example::
+
+        item = ResultItem(
+            uid="3d4c1e2a-...",
+            title="Downloads",
+            subtitle="/Users/me/Downloads",
+            arg="/Users/me/Downloads",
+            type=ItemType.FILE,
+            icon=Icon(
+                path="/Users/me/Downloads",
+                resource_type=IconResourceType.FILEICON,
+            ),
+        )
+        payload = item.to_alfred()
     """
 
     title: str
@@ -64,11 +137,36 @@ class ResultItem:
     variables: Mapping[str, str] | None = None
 
     def __post_init__(self) -> None:
+        """Validate field constraints after dataclass initialisation.
+
+        Raises:
+            ValueError: If :attr:`title` is empty or contains only whitespace.
+        """
         if not self.title.strip():
             raise ValueError("ResultItem.title must be a non-empty string.")
 
     def to_alfred(self) -> dict[str, Any]:
-        """Serialize to Alfred item JSON."""
+        """Serialize this item to Alfred's Script Filter JSON shape.
+
+        Builds the dict that represents one entry in Alfred's ``"items"``
+        array.  Only fields that have been explicitly set (i.e. are not
+        ``None``) are included; this keeps the JSON output minimal and avoids
+        sending unexpected keys to Alfred.
+
+        The ``mods`` list is converted to a dict keyed by modifier combo
+        string (e.g. ``{"cmd": {...}, "alt+shift": {...}}``), matching
+        Alfred's expected schema.
+
+        Returns:
+            A JSON-serialisable dict conforming to the Alfred Script Filter
+            result item schema.
+
+        Example::
+
+            item = ResultItem(title="foo", arg="bar", uid="abc-123")
+            item.to_alfred()
+            # {"title": "foo", "arg": "bar", "uid": "abc-123"}
+        """
         data: dict[str, Any] = {"title": self.title}
 
         if self.uid is not None:
