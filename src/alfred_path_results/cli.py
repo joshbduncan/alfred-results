@@ -313,7 +313,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
         item = ResultItem(
             uid=path_to_uuid(str(p.expanduser().resolve())),
-            title=p.name,
+            title=p.name or p.as_posix(),
             subtitle=p.as_posix(),
             arg=p.as_posix(),
             icon=icon,
