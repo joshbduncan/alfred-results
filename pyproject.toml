@@ -1,0 +1,21 @@
+[project]
+name = "alfred-path-results"
+version = "0.1.0"
+description = "Helper package for working with Alfred app workflows."
+readme = "README.md"
+authors = [{ name = "Josh Duncan", email = "joshbduncan@gmail.com" }]
+requires-python = ">=3.12"
+dependencies = []
+
+[project.scripts]
+alfred-path-results = "alfred_path_results.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.9.26,<0.10.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = ["ruff>=0.15.0", "ty>=0.0.14"]
+
+[tool.uv.workspace]
+members = ["alfred-path-resultsc"]
