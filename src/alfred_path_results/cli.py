@@ -302,7 +302,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     items: list[ResultItem] = []
     for i in paths:
         p = Path(i)
-        icon = Icon(path=str(p), resource_type=IconResourceType.FILEICON)
+        p_resolved = p.expanduser().resolve()
+        icon = Icon(path=str(p_resolved), resource_type=IconResourceType.FILEICON)
 
         result_variables: dict[str, str] = {"_path": p.as_posix()}
         if args.result_var is not None:
@@ -312,7 +313,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 parser.error(str(e))
 
         item = ResultItem(
-            uid=path_to_uuid(str(p.expanduser().resolve())),
+            uid=path_to_uuid(str(p_resolved)),
             title=p.name or p.as_posix(),
             subtitle=p.as_posix(),
             arg=p.as_posix(),
