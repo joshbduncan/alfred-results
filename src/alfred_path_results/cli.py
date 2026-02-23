@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import argparse
 import sys
-from contextlib import nullcontext
+from contextlib import contextmanager
 from importlib.metadata import version
 from json import dumps
 from pathlib import Path
@@ -34,17 +34,41 @@ from typing import TYPE_CHECKING, Any
 from uuid import NAMESPACE_URL, uuid5
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Generator, Sequence
 
 from .result_item import Icon, IconResourceType, ItemType, Mod, ResultItem
+
+
+@contextmanager
+def _open_input(val: str) -> Generator[Any, None, None]:
+    """Return an open text-file context manager for *val*.
+
+    Yields ``sys.stdin`` directly when *val* is ``"-"``; otherwise opens the
+    file at *val* with UTF-8 encoding.  The file is closed automatically on
+    exit; stdin is left open.
+
+    Args:
+        val: A filesystem path, or ``"-"`` for stdin.
+
+    Yields:
+        A readable text-file object.
+
+    Raises:
+        OSError: If *val* is a path that cannot be opened.
+    """
+    if val == "-":
+        yield sys.stdin
+    else:
+        with open(val, encoding="utf-8") as f:
+            yield f
 
 
 def parse_input(val: str) -> list[str]:
     """Read newline-delimited paths from stdin or a file path.
 
-    Opens ``val`` as a file path, or reads from stdin when ``val`` is
-    ``"-"``.  Blank lines and lines that are entirely whitespace are
-    discarded.
+    Opens ``val`` as a file path with UTF-8 encoding, or reads from stdin
+    when ``val`` is ``"-"``.  Blank lines and lines that are entirely
+    whitespace are discarded.
 
     Args:
         val: A filesystem path to a text file, or ``"-"`` to read from stdin.
@@ -57,9 +81,7 @@ def parse_input(val: str) -> list[str]:
         OSError: If ``val`` is a file path that cannot be opened (e.g. does
             not exist or permission denied).
     """
-    cm = nullcontext(sys.stdin) if val == "-" else open(val)  # noqa: SIM115
-
-    with cm as f:
+    with _open_input(val) as f:
         return [ln.strip() for ln in f if ln.strip()]
 
 
@@ -301,7 +323,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         items.append(item)
 
     # output alfred json
-    print(
+    sys.stdout.write(
         dumps(
             {
                 "variables": session_vars,
