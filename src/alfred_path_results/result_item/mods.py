@@ -1,8 +1,27 @@
+"""
+mods
+----
+Alfred Script Filter modifier-key override types.
+
+Defines :data:`VALID_MODIFIER_KEYS`, the :func:`valid_modifiers` helper, and
+the :class:`Mod` dataclass that represents one entry inside a result item's
+``"mods"`` dict.
+
+Alfred modifier JSON example::
+
+    {
+        "mods": {
+            "cmd": {"valid": true, "arg": "/tmp/foo", "subtitle": "Open in Terminal"},
+            "alt+shift": {"valid": false, "subtitle": "Not available"}
+        }
+    }
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
 from itertools import permutations
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Any, Final
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -12,42 +31,83 @@ if TYPE_CHECKING:
 
 
 VALID_MODIFIER_KEYS: Final[tuple[str, ...]] = ("cmd", "alt", "ctrl", "shift", "fn")
+"""The individual modifier key names recognised by Alfred.
+
+Used as the base vocabulary for generating all valid single-key and
+multi-key combo strings via :func:`valid_modifiers`.
+"""
 
 
 def valid_modifiers(modifier_keys: list[str] | None = None) -> set[str]:
-    """
-    Return the set of allowed modifier combo strings.
+    """Return the complete set of allowed modifier combo strings.
 
-    Alfred accepts: cmd, alt, ctrl, shift, fn, and combinations using "+".
-    This generates order-sensitive combos (both "cmd+shift" and "shift+cmd"),
-    and limits to 1, 2, or 3-part combos.
+    Alfred accepts the five base modifier keys and any ordered combination of
+    up to three of them joined with ``"+"``.  Both orderings of a two-key
+    combo are considered distinct valid strings (e.g. ``"cmd+alt"`` and
+    ``"alt+cmd"`` are each valid).
 
     Args:
-        modifier_keys: Keys to include. Defaults to VALID_MODIFIER_KEYS.
+        modifier_keys: Keys to use as the base vocabulary.  Defaults to
+            :data:`VALID_MODIFIER_KEYS` when ``None`` or empty.
 
     Returns:
-        A set of valid combo strings (e.g., {"cmd", "cmd+alt", "alt+cmd", ...}).
+        A set of all valid combo strings for the given keys, including all
+        1-, 2-, and 3-element ordered permutations joined by ``"+"``.
+
+    Example::
+
+        valid_modifiers()
+        # {"cmd", "alt", ..., "cmd+alt", "alt+cmd", ..., "cmd+alt+shift", ...}
+
+        valid_modifiers(["cmd", "alt"])
+        # {"cmd", "alt", "cmd+alt", "alt+cmd"}
     """
     keys = modifier_keys or list(VALID_MODIFIER_KEYS)
     return {"+".join(p) for r in (1, 2, 3) for p in permutations(keys, r)}
 
 
-# Precompute once; avoids rebuilding the set for every Mod instance.
+# Precomputed once at import time to avoid rebuilding the permutation set on
+# every Mod instantiation.
 _VALID_MOD_COMBOS: Final[set[str]] = valid_modifiers()
 
 
 @dataclass(slots=True)
 class Mod:
-    """
-    Alfred modifier entry.
+    """An Alfred modifier-key override entry inside a result item's ``mods`` dict.
 
-    `key` is the modifier combination string used as the JSON key in `mods`.
-    Examples: "cmd", "alt", "cmd+alt", "ctrl+shift", "fn".
+    Each :class:`Mod` represents the behaviour change that occurs when the
+    user holds a specific modifier key (or combination) while the result row
+    is highlighted.  Alfred uses :attr:`key` as the JSON dict key and the
+    output of :meth:`payload` as its value.
 
-    This model supports only:
-        - valid
-        - arg
-        - subtitle
+    Attributes:
+        key: The modifier combo string used as the JSON key in ``"mods"``.
+            Must be one of the valid single- or multi-key combos accepted by
+            Alfred (e.g. ``"cmd"``, ``"alt"``, ``"cmd+shift"``).  Valid
+            combos are any 1–3-element ordered permutation of
+            ``("cmd", "alt", "ctrl", "shift", "fn")`` joined with ``"+"``.
+        valid: Overrides the parent item's actionability for this modifier.
+            ``True`` allows actioning; ``False`` makes the item non-actionable
+            when the modifier is held.
+        arg: The argument passed downstream when the user actions the item
+            while holding this modifier.  Overrides the parent item's
+            :attr:`~ResultItem.arg`.
+        subtitle: Subtitle text shown instead of the parent item's subtitle
+            while this modifier is held.
+        icon: Icon shown instead of the parent item's icon while this
+            modifier is held.
+        variables: Item-scoped session variables merged into Alfred's
+            environment when the item is actioned with this modifier held.
+
+    Raises:
+        ValueError: On construction if :attr:`key` is not a valid modifier
+            combo string.
+
+    Example::
+
+        mod = Mod(key="cmd", valid=True, arg="/tmp/out", subtitle="Open in Terminal")
+        mod.payload()
+        # {"valid": True, "arg": "/tmp/out", "subtitle": "Open in Terminal"}
     """
 
     key: str
@@ -58,18 +118,32 @@ class Mod:
     variables: Mapping[str, str] | None = None
 
     def __post_init__(self) -> None:
-        """
-        Validate `key` is an allowed modifier key or combination.
+        """Validate that :attr:`key` is an allowed modifier combo.
 
         Raises:
-            ValueError: If `key` is not a valid combo.
+            ValueError: If :attr:`key` is not in the precomputed set of valid
+                modifier combo strings.
         """
         if self.key not in _VALID_MOD_COMBOS:
             raise ValueError(f"Invalid modifier key combo: {self.key!r}.")
 
-    def payload(self) -> dict[str, object]:
-        """Return the Alfred mod payload (the value under the `mods` key)."""
-        data: dict[str, object] = {}
+    def payload(self) -> dict[str, Any]:
+        """Serialize to the Alfred mod payload dict (the value under the mod key).
+
+        Builds the dict that Alfred assigns to :attr:`key` inside a result
+        item's ``"mods"`` object.  Only non-``None`` fields are included.
+
+        Returns:
+            A JSON-serialisable dict with any subset of ``"valid"``, ``"arg"``,
+            ``"subtitle"``, ``"icon"``, and ``"variables"`` that are set on
+            this instance.  Returns an empty dict ``{}`` when no fields are set.
+
+        Example::
+
+            Mod(key="alt", subtitle="Preview only", valid=False).payload()
+            # {"subtitle": "Preview only", "valid": False}
+        """
+        data: dict[str, Any] = {}
         if self.valid is not None:
             data["valid"] = self.valid
         if self.arg is not None:
