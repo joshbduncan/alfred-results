@@ -128,7 +128,7 @@ def get_path_attribute(p: Path, key: str) -> Any:
     return attr() if callable(attr) else attr
 
 
-def parse_result_vars(p: Path, val: list[list[str]]) -> dict[str, str]:
+def parse_result_vars(p: Path, val: list[list[str]] | None) -> dict[str, str] | None:
     """Build per-result variables by resolving Path attributes.
 
     Each element of *val* is a two-element list ``[VAR_NAME, PATH_ATTR]``
@@ -138,22 +138,26 @@ def parse_result_vars(p: Path, val: list[list[str]]) -> dict[str, str]:
     Args:
         p: The :class:`~pathlib.Path` for the current result item.
         val: A list of ``[variable_name, path_attribute]`` pairs supplied via
-            ``--result-var`` on the command line.
+            ``--result-var`` on the command line, or ``None`` when the option
+            was not provided.
 
     Returns:
-        A ``{variable_name: resolved_str_value}`` dict.
+        A ``{variable_name: resolved_str_value}`` dict, or ``None`` when
+        *val* is ``None``.
 
     Raises:
         AttributeError: If any ``path_attribute`` name is not valid on
             :class:`~pathlib.Path`.
     """
+    if val is None:
+        return None
     d: dict[str, str] = {}
     for k, v in val:
         d[k] = str(get_path_attribute(p, v))
     return d
 
 
-def parse_mods(val: list[list[str]]) -> list[Mod]:
+def parse_mods(val: list[list[str]] | None) -> list[Mod]:
     """Convert argparse ``--mod`` triples into :class:`~result_item.Mod` instances.
 
     Each element of *val* is a three-element list ``[MOD_KEY, ARG, SUBTITLE]``
@@ -161,15 +165,19 @@ def parse_mods(val: list[list[str]]) -> list[Mod]:
 
     Args:
         val: A list of ``[mod_key, arg, subtitle]`` triples supplied via
-            ``--mod`` on the command line.
+            ``--mod`` on the command line, or ``None`` when the option was
+            not provided.
 
     Returns:
-        A list of :class:`~result_item.Mod` objects with ``valid=True``.
+        A list of :class:`~result_item.Mod` objects with ``valid=True``, or
+        an empty list when *val* is ``None``.
 
     Raises:
         ValueError: If any *mod_key* is not a recognised Alfred modifier combo
             (propagated from :class:`~result_item.Mod.__post_init__`).
     """
+    if val is None:
+        return []
     return [
         Mod(key=key, valid=True, arg=arg, subtitle=subtitle)
         for key, arg, subtitle in val
@@ -294,7 +302,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     # process modifiers
     mods: list[Mod] = []
     try:
-        mods = parse_mods(args.mod) if args.mod is not None else []
+        mods = parse_mods(args.mod)
     except ValueError as e:
         parser.error(str(e))
 
@@ -306,11 +314,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         icon = Icon(path=str(p_resolved), resource_type=IconResourceType.FILEICON)
 
         result_variables: dict[str, str] = {"_path": p.as_posix()}
-        if args.result_var is not None:
-            try:
-                result_variables = parse_result_vars(p, args.result_var)
-            except AttributeError as e:
-                parser.error(str(e))
+        try:
+            result_variables = parse_result_vars(p, args.result_var) or result_variables
+        except AttributeError as e:
+            parser.error(str(e))
 
         item = ResultItem(
             uid=path_to_uuid(str(p_resolved)),
