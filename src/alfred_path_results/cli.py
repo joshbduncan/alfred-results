@@ -225,7 +225,10 @@ def create_parser() -> argparse.ArgumentParser:
         nargs=2,
         action="append",
         metavar=("KEY", "VALUE"),
-        help="alfred result item variable from from pathlib Path object (ex. --item-var path as_posix)",  # noqa: E501
+        help=(
+            "alfred result item variable from pathlib Path object"
+            " (ex. --result-var path as_posix)"
+        ),
     )
 
     parser.add_argument(
