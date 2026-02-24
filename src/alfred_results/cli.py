@@ -27,7 +27,6 @@ from __future__ import annotations
 import argparse
 import sys
 from contextlib import contextmanager
-from json import dumps
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -35,6 +34,7 @@ if TYPE_CHECKING:
     from collections.abc import Generator, Sequence
 
 from . import _get_version
+from .payload import ScriptFilterPayload
 from .result_item import Mod, ResultItem
 
 
@@ -291,7 +291,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     except ValueError as e:
         parser.error(str(e))
 
-    # build alfred result dict
+    # build alfred result items dict
     items: list[ResultItem] = []
     for i in paths:
         p = Path(i)
@@ -304,15 +304,11 @@ def main(argv: Sequence[str] | None = None) -> int:
 
         items.append(ResultItem.from_path(p, mods=mods, variables=result_variables))
 
+    # build alfred script filter json payload
+    payload = ScriptFilterPayload(variables=session_vars, items=items)
+
     # output alfred json
-    sys.stdout.write(
-        dumps(
-            {
-                "variables": session_vars,
-                "items": [item.to_alfred() for item in items],
-            },
-        )
-    )
+    sys.stdout.write(payload.to_alfred())
 
     return 0
 

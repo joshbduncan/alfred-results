@@ -21,9 +21,9 @@ When the package is not installed (e.g. running from source via PYTHONPATH),
 
 from __future__ import annotations
 
-from .utils import path_to_uuid
+from .payload import ScriptFilterPayload
 
-__all__ = ["path_to_uuid"]
+__all__ = ["ScriptFilterPayload"]
 
 
 def _get_version() -> str:
