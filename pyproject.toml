@@ -18,4 +18,4 @@ build-backend = "uv_build"
 dev = ["ruff>=0.15.0", "ty>=0.0.14"]
 
 [tool.uv.workspace]
-members = ["alfred-path-resultsc"]
+members = ["alfred-path-results"]

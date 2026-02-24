@@ -157,28 +157,15 @@ usage: alfred-path-results [-h] [-i FILE] [-m MOD ARG SUBTITLE]
 
 ### Building result items
 
+Use `ResultItem.from_path()` to convert a filesystem path into a fully-populated
+result item in one call. It automatically expands `~`, resolves symlinks, derives
+a stable UUID `uid`, and sets the title, subtitle, arg, icon, and type:
+
 ```python
 from json import dumps
-from alfred_path_results.result_item import (
-    Icon,
-    IconResourceType,
-    ItemType,
-    Mod,
-    ResultItem,
-)
-from alfred_path_results import path_to_uuid
+from alfred_path_results.result_item import ResultItem
 
-path = "/Users/me/Downloads"
-
-item = ResultItem(
-    uid=path_to_uuid(path),
-    title="Downloads",
-    subtitle=path,
-    arg=path,
-    type=ItemType.FILE,
-    icon=Icon(path=path, resource_type=IconResourceType.FILEICON),
-)
-
+item = ResultItem.from_path("/Users/me/Downloads")
 print(dumps({"items": [item.to_alfred()]}))
 ```
 
@@ -192,19 +179,39 @@ Output:
       "uid": "...",
       "subtitle": "/Users/me/Downloads",
       "arg": "/Users/me/Downloads",
-      "type": "file",
-      "icon": {"type": "fileicon", "path": "/Users/me/Downloads"}
+      "type": "default",
+      "icon": {"type": "fileicon", "path": "/Users/me/Downloads"},
+      "variables": {"_path": "/Users/me/Downloads"}
     }
   ]
 }
 ```
 
+For full control over every field, construct `ResultItem` directly:
+
+```python
+from alfred_path_results.result_item import Icon, IconResourceType, ItemType, ResultItem
+from alfred_path_results import path_to_uuid
+
+path = "/Users/me/Downloads"
+
+item = ResultItem(
+    uid=path_to_uuid(path),
+    title="Downloads",
+    subtitle=path,
+    arg=path,
+    type=ItemType.FILE,
+    icon=Icon(path=path, resource_type=IconResourceType.FILEICON),
+)
+```
+
 ### Modifier key overrides
 
 ```python
-item = ResultItem(
-    title="report.pdf",
-    arg="/Users/me/report.pdf",
+from alfred_path_results.result_item import Mod, ResultItem
+
+item = ResultItem.from_path(
+    "/Users/me/report.pdf",
     mods=[
         Mod(key="cmd", valid=True, arg="/Users/me/report.pdf", subtitle="Open in Preview"),
         Mod(key="alt", valid=True, arg="/Users/me/report.pdf", subtitle="Reveal in Finder"),

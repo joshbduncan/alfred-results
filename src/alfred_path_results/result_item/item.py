@@ -24,6 +24,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -144,6 +145,70 @@ class ResultItem:
         """
         if not self.title.strip():
             raise ValueError("ResultItem.title must be a non-empty string.")
+
+    @classmethod
+    def from_path(
+        cls,
+        path: str | Path,
+        *,
+        mods: list[Mod] | None = None,
+        variables: Mapping[str, str] | None = None,
+    ) -> ResultItem:
+        """Construct a :class:`ResultItem` from a filesystem path.
+
+        Handles the boilerplate of building a fully-populated result item from
+        a path: expanding ``~``, resolving symlinks, deriving a stable UUID
+        ``uid``, setting ``title``, ``subtitle``, ``arg``, ``icon``, and
+        ``type`` automatically.
+
+        The default ``variables`` dict contains a single ``"_path"`` key set
+        to the POSIX representation of the (unresolved) input path, matching
+        the CLI's default behaviour.  Pass an explicit ``variables`` mapping to
+        override this.
+
+        Args:
+            path: The filesystem path to convert.  May be a :class:`~pathlib.Path`
+                object or a string (including ``~``-prefixed paths).
+            mods: Optional list of :class:`~alfred_path_results.result_item.Mod`
+                modifier-key overrides to attach to the item.
+            variables: Optional item-scoped Alfred session variables.  Defaults
+                to ``{"_path": <posix path>}`` when ``None``.
+
+        Returns:
+            A fully-populated :class:`ResultItem` ready for serialisation via
+            :meth:`to_alfred`.
+
+        Example::
+
+            item = ResultItem.from_path("/Users/me/Downloads")
+            item.to_alfred()
+            # {
+            #   "title": "Downloads",
+            #   "uid": "...",
+            #   "subtitle": "/Users/me/Downloads",
+            #   "arg": "/Users/me/Downloads",
+            #   "type": "default",
+            #   "icon": {"type": "fileicon", "path": "/Users/me/Downloads"},
+            #   "variables": {"_path": "/Users/me/Downloads"}
+            # }
+        """
+        from ..utils import path_to_uuid
+        from .icon import Icon, IconResourceType
+
+        p = Path(path)
+        p_resolved = p.expanduser().resolve()
+        posix = p.as_posix()
+
+        return cls(
+            uid=path_to_uuid(str(p_resolved)),
+            title=p.name or posix,
+            subtitle=posix,
+            arg=posix,
+            icon=Icon(path=str(p_resolved), resource_type=IconResourceType.FILEICON),
+            type=ItemType.FILE if p.is_file() else ItemType.DEFAULT,
+            mods=mods,
+            variables=variables if variables is not None else {"_path": posix},
+        )
 
     def to_alfred(self) -> dict[str, Any]:
         """Serialize this item to Alfred's Script Filter JSON shape.

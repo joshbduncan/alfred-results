@@ -35,8 +35,7 @@ if TYPE_CHECKING:
     from collections.abc import Generator, Sequence
 
 from . import _get_version
-from .result_item import Icon, IconResourceType, ItemType, Mod, ResultItem
-from .utils import path_to_uuid
+from .result_item import Mod, ResultItem
 
 
 @contextmanager
@@ -296,8 +295,6 @@ def main(argv: Sequence[str] | None = None) -> int:
     items: list[ResultItem] = []
     for i in paths:
         p = Path(i)
-        p_resolved = p.expanduser().resolve()
-        icon = Icon(path=str(p_resolved), resource_type=IconResourceType.FILEICON)
 
         result_variables: dict[str, str] = {"_path": p.as_posix()}
         try:
@@ -305,17 +302,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         except AttributeError as e:
             parser.error(str(e))
 
-        item = ResultItem(
-            uid=path_to_uuid(str(p_resolved)),
-            title=p.name or p.as_posix(),
-            subtitle=p.as_posix(),
-            arg=p.as_posix(),
-            icon=icon,
-            type=ItemType.FILE if p.is_file() else ItemType.DEFAULT,
-            mods=mods,
-            variables=result_variables,
-        )
-        items.append(item)
+        items.append(ResultItem.from_path(p, mods=mods, variables=result_variables))
 
     # output alfred json
     sys.stdout.write(
