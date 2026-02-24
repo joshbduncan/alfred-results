@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 
 
 VALID_MODIFIER_KEYS: Final[tuple[str, ...]] = ("cmd", "alt", "ctrl", "shift", "fn")
-"""The individual modifier key names recognised by Alfred.
+"""The individual modifier key names recognized by Alfred.
 
 Used as the base vocabulary for generating all valid single-key and
 multi-key combo strings via :func:`valid_modifiers`.
@@ -75,7 +75,7 @@ _VALID_MOD_COMBOS: Final[set[str]] = valid_modifiers()
 class Mod:
     """An Alfred modifier-key override entry inside a result item's ``mods`` dict.
 
-    Each :class:`Mod` represents the behaviour change that occurs when the
+    Each :class:`Mod` represents the behavior change that occurs when the
     user holds a specific modifier key (or combination) while the result row
     is highlighted.  Alfred uses :attr:`key` as the JSON dict key and the
     output of :meth:`payload` as its value.
@@ -134,7 +134,7 @@ class Mod:
         item's ``"mods"`` object.  Only non-``None`` fields are included.
 
         Returns:
-            A JSON-serialisable dict with any subset of ``"valid"``, ``"arg"``,
+            A JSON-serializable dict with any subset of ``"valid"``, ``"arg"``,
             ``"subtitle"``, ``"icon"``, and ``"variables"`` that are set on
             this instance.  Returns an empty dict ``{}`` when no fields are set.
 

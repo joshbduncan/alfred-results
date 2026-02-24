@@ -58,7 +58,7 @@ class ResultItem:
     """A single row in Alfred's Script Filter ``items`` array.
 
     Only :attr:`title` is required by Alfred's schema.  All other fields are
-    optional; unset fields (``None``) are omitted from the serialised JSON
+    optional; unset fields (``None``) are omitted from the serialized JSON
     produced by :meth:`to_alfred`.
 
     Attributes:
@@ -82,12 +82,12 @@ class ResultItem:
         match: A custom string used for Alfred's filtering when the Script
             Filter is configured with Alfred's built-in matching.  Defaults to
             the title when not set.
-        type: Controls how Alfred categorises this result; see
-            :class:`ItemType`.  Omit to use Alfred's default behaviour.
+        type: Controls how Alfred categorizes this result; see
+            :class:`ItemType`.  Omit to use Alfred's default behavior.
         icon: The icon displayed next to the result row; see
             :class:`~alfred_path_results.result_item.Icon`.
         mods: A list of :class:`~alfred_path_results.result_item.Mod`
-            instances that override the item's behaviour when the user holds a
+            instances that override the item's behavior when the user holds a
             modifier key (cmd, alt, ctrl, shift, fn, or combinations).
         action: The Universal Action payload passed to Alfred when the item is
             actioned via Universal Actions.  Can be a string, a list of
@@ -138,7 +138,7 @@ class ResultItem:
     variables: Mapping[str, str] | None = None
 
     def __post_init__(self) -> None:
-        """Validate field constraints after dataclass initialisation.
+        """Validate field constraints after dataclass initialization.
 
         Raises:
             ValueError: If :attr:`title` is empty or contains only whitespace.
@@ -163,7 +163,7 @@ class ResultItem:
 
         The default ``variables`` dict contains a single ``"_path"`` key set
         to the POSIX representation of the (unresolved) input path, matching
-        the CLI's default behaviour.  Pass an explicit ``variables`` mapping to
+        the CLI's default behavior.  Pass an explicit ``variables`` mapping to
         override this.
 
         Args:
@@ -175,7 +175,7 @@ class ResultItem:
                 to ``{"_path": <posix path>}`` when ``None``.
 
         Returns:
-            A fully-populated :class:`ResultItem` ready for serialisation via
+            A fully-populated :class:`ResultItem` ready for serialization via
             :meth:`to_alfred`.
 
         Example::
@@ -223,7 +223,7 @@ class ResultItem:
         Alfred's expected schema.
 
         Returns:
-            A JSON-serialisable dict conforming to the Alfred Script Filter
+            A JSON-serializable dict conforming to the Alfred Script Filter
             result item schema.
 
         Example::

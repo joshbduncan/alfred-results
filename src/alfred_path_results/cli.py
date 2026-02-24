@@ -172,7 +172,7 @@ def parse_mods(val: list[list[str]] | None) -> list[Mod]:
         an empty list when *val* is ``None``.
 
     Raises:
-        ValueError: If any *mod_key* is not a recognised Alfred modifier combo
+        ValueError: If any *mod_key* is not a recognized Alfred modifier combo
             (propagated from :class:`~result_item.Mod.__post_init__`).
     """
     if val is None:
@@ -255,7 +255,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     5. For each path: build an :class:`~result_item.Icon`, resolve any
        ``--result-var`` pairs, construct a :class:`~result_item.ResultItem`,
        and collect it.
-    6. Serialise to JSON and print to stdout.
+    6. Serialize to JSON and print to stdout.
 
     Args:
         argv: Command-line argument list.  Defaults to ``sys.argv[1:]`` when

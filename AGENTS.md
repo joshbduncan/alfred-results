@@ -221,7 +221,7 @@ uv run alfred-path-results --help
 - Catch `OSError` when performing file I/O and surface `e.strerror` to the user.
 - Catch `AttributeError` and `ValueError` in `main()` and forward to
   `parser.error()`.
-- Initialise variables before `try/except` blocks so they are always bound from
+- Initialize variables before `try/except` blocks so they are always bound from
   the type checker's perspective, even though `parser.error()` exits unconditionally.
 
 ---
