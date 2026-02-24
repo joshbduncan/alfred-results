@@ -83,13 +83,13 @@ uv run alfred-path-results --help
 
 ### Formatting (ruff.toml)
 
-| Setting            | Value               |
-|--------------------|---------------------|
-| Line length        | 88 (Black-compat)   |
-| Indent             | 4 spaces            |
-| Quotes             | Double              |
+| Setting              | Value             |
+|----------------------|-------------------|
+| Line length          | 88 (Black-compat) |
+| Indent               | 4 spaces          |
+| Quotes               | Double            |
 | Magic trailing comma | Respected         |
-| Target Python      | py311+              |
+| Target Python        | py312+            |
 
 ### Enabled Lint Rules
 
@@ -106,14 +106,14 @@ uv run alfred-path-results --help
 
 ## Naming Conventions
 
-| Construct              | Style             | Example                      |
-|------------------------|-------------------|------------------------------|
-| Packages / modules     | `snake_case`      | `result_item`, `alfred_path_results` |
-| Classes                | `PascalCase`      | `ResultItem`, `IconResourceType` |
-| Functions / variables  | `snake_case`      | `parse_input`, `result_variables` |
-| Public constants       | `UPPER_SNAKE_CASE` with `Final` | `VALID_MODIFIER_KEYS` |
-| Private module-level   | `_UPPER_SNAKE_CASE` | `_VALID_MOD_COMBOS`       |
-| Enum values            | `UPPER_SNAKE_CASE` | `ItemType.DEFAULT`           |
+| Construct              | Style                        | Example                              |
+|------------------------|------------------------------|--------------------------------------|
+| Packages / modules     | `snake_case`                 | `result_item`, `alfred_path_results` |
+| Classes                | `PascalCase`                 | `ResultItem`, `IconResourceType`     |
+| Functions / variables  | `snake_case`                 | `parse_input`, `result_variables`    |
+| Public constants       | `UPPER_SNAKE_CASE` + `Final` | `VALID_MODIFIER_KEYS`                |
+| Private module-level   | `_UPPER_SNAKE_CASE`          | `_VALID_MOD_COMBOS`                  |
+| Enum values            | `UPPER_SNAKE_CASE`           | `ItemType.DEFAULT`                   |
 
 ---
 
@@ -137,6 +137,8 @@ uv run alfred-path-results --help
 - Define `__all__` in `__init__.py` files to explicitly control the public API.
 - Import order enforced by ruff/isort: stdlib → third-party → local, each group
   separated by a blank line.
+- Defer imports inside methods (e.g. classmethods) when needed to avoid circular
+  imports — this is preferable to restructuring the module graph.
 
 ---
 
@@ -146,7 +148,7 @@ uv run alfred-path-results --help
 - Use `X | Y` union syntax (not `Union[X, Y]`); enabled by `from __future__ import annotations`.
 - Use `X | None` (not `Optional[X]`).
 - Prefer `collections.abc` abstract types for parameters (`Sequence`, `Mapping`).
-- Use `Final` for constants: `VALID_MODIFIER_KEYS: Final = frozenset(...)`.
+- Use `Final` for constants: `VALID_MODIFIER_KEYS: Final[tuple[str, ...]] = (...)`.
 - The package is typed (PEP 561); keep `py.typed` present.
 
 ---
@@ -157,6 +159,8 @@ uv run alfred-path-results --help
   explicit attribute declaration).
 - Validate in `__post_init__`; raise `ValueError` with a descriptive message.
 - Default optional fields to `None` rather than a sentinel.
+- Use `@classmethod` factory methods (e.g. `from_path`) to encapsulate common
+  construction patterns and spare callers from boilerplate.
 
   ```python
   @dataclass(slots=True)
@@ -165,8 +169,8 @@ uv run alfred-path-results --help
       subtitle: str | None = None
 
       def __post_init__(self) -> None:
-          if not self.title:
-              raise ValueError(f"title must not be empty, got {self.title!r}")
+          if not self.title.strip():
+              raise ValueError("ResultItem.title must be a non-empty string.")
   ```
 
 ---
@@ -186,14 +190,14 @@ uv run alfred-path-results --help
 
 ---
 
-## Serialization (`to_alfred()` methods)
+## Serialization (`to_alfred()` / `payload()` methods)
 
 - Return `dict[str, Any]`; never use `dataclasses.asdict()` (it recurses too
   eagerly and loses control).
 - Gate every optional field with `if field is not None:` before adding it to the
   dict — omit falsy/unset keys from output.
 - Return `None` from `to_alfred()` when the whole object should be omitted from
-  the parent payload.
+  the parent payload (e.g. `Icon.to_alfred()` returns `None` when no path is set).
 
   ```python
   def to_alfred(self) -> dict[str, Any]:
@@ -210,13 +214,15 @@ uv run alfred-path-results --help
 - Raise `ValueError` with descriptive messages for invalid input; use `!r` repr
   formatting for the bad value:
   ```python
-  raise ValueError(f"Invalid modifier key {key!r}; expected one of {VALID_MODIFIER_KEYS!r}")
+  raise ValueError(f"Invalid modifier key combo: {self.key!r}.")
   ```
 - In the CLI (`cli.py`), route all errors through `parser.error(...)` for
   consistent argparse-style output to stderr.
 - Catch `OSError` when performing file I/O and surface `e.strerror` to the user.
 - Catch `AttributeError` and `ValueError` in `main()` and forward to
   `parser.error()`.
+- Initialise variables before `try/except` blocks so they are always bound from
+  the type checker's perspective, even though `parser.error()` exits unconditionally.
 
 ---
 
@@ -225,9 +231,11 @@ uv run alfred-path-results --help
 ```
 src/
 └── alfred_path_results/
-    ├── __init__.py          # Package init; lazy __version__ lookup
+    ├── __init__.py          # Package init; lazy __version__ + _get_version()
+    ├── __main__.py          # python -m alfred_path_results entry point
     ├── cli.py               # argparse CLI entry point
     ├── py.typed             # PEP 561 marker
+    ├── utils.py             # Shared utilities (path_to_uuid, _PATH_UUID_NAMESPACE)
     └── result_item/
         ├── __init__.py      # Public re-exports + __all__
         ├── args.py          # ArgValue type alias
@@ -238,3 +246,5 @@ src/
 
 New public types belong in `src/alfred_path_results/result_item/` with a
 corresponding re-export in `result_item/__init__.py` and `__all__`.
+
+Shared utilities with no CLI or Alfred-type dependencies belong in `utils.py`.
