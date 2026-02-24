@@ -1,4 +1,4 @@
-# alfred-path-results
+# alfred-results
 
 Convert filesystem paths into fully-featured [Alfred Script Filter](https://www.alfredapp.com/help/workflows/inputs/script-filter/) JSON result items.
 
@@ -9,26 +9,26 @@ Usable as a **CLI tool** (pipe paths in, get Alfred JSON out) or as a **Python l
 ## Installation
 
 ```bash
-pip install alfred-path-results
+pip install alfred-results
 ```
 
 Or with [uv](https://docs.astral.sh/uv/):
 
 ```bash
-uv add alfred-path-results
+uv add alfred-results
 ```
 
 ### CLI only (no project required)
 
-If you only need the CLI and don't want to add it as a project dependency, install it as a [uv tool](https://docs.astral.sh/uv/concepts/tools/). This makes the `alfred-path-results` command available globally without affecting any project environment:
+If you only need the CLI and don't want to add it as a project dependency, install it as a [uv tool](https://docs.astral.sh/uv/concepts/tools/). This makes the `alfred-results` command available globally without affecting any project environment:
 
 ```bash
-uv tool install alfred-path-results
+uv tool install alfred-results
 ```
 
 ### Bundling with a workflow (no install required)
 
-Copy the `alfred_path_results/` package directory into your workflow bundle and add a `run.py` entry point at the workflow root:
+Copy the `alfred_results/` package directory into your workflow bundle and add a `run.py` entry point at the workflow root:
 
 ```python
 #!/usr/bin/env python3
@@ -38,7 +38,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from alfred_path_results.cli import main
+from alfred_results.cli import main
 
 sys.exit(main())
 ```
@@ -58,13 +58,13 @@ The CLI reads newline-delimited paths from **stdin** or a **file** and writes Al
 ### Read from stdin
 
 ```bash
-find ~/Projects -maxdepth 1 -type d | alfred-path-results
+find ~/Projects -maxdepth 1 -type d | alfred-results
 ```
 
 ### Read from a file
 
 ```bash
-alfred-path-results --input paths.txt
+alfred-results --input paths.txt
 ```
 
 ### Example output
@@ -92,7 +92,7 @@ Add actions for modifier keys. Each `--mod` takes three arguments: the key combo
 
 ```bash
 find ~/Projects -maxdepth 1 -type d \
-  | alfred-path-results \
+  | alfred-results \
     --mod cmd /tmp/out "Open in Terminal" \
     --mod alt /tmp/out "Copy path"
 ```
@@ -104,7 +104,7 @@ Valid modifier keys: `cmd`, `alt`, `ctrl`, `shift`, `fn` and combinations up to 
 Set Alfred session-level variables included in the top-level `variables` object:
 
 ```bash
-echo "/tmp/foo" | alfred-path-results \
+echo "/tmp/foo" | alfred-results \
   --session-var source "file-browser" \
   --session-var ts "2026-01-01"
 ```
@@ -121,7 +121,7 @@ echo "/tmp/foo" | alfred-path-results \
 Map item-scoped variables to [`pathlib.Path`](https://docs.python.org/3/library/pathlib.html) attributes or methods. The second argument must be a valid `Path` attribute name.
 
 ```bash
-echo "/Users/me/report.pdf" | alfred-path-results \
+echo "/Users/me/report.pdf" | alfred-results \
   --result-var posix_path as_posix \
   --result-var extension suffix \
   --result-var parent parent
@@ -140,7 +140,7 @@ This produces `variables` like:
 ### All options
 
 ```
-usage: alfred-path-results [-h] [-i FILE] [-m MOD ARG SUBTITLE]
+usage: alfred-results [-h] [-i FILE] [-m MOD ARG SUBTITLE]
                            [--session-var KEY VALUE] [--result-var KEY VALUE]
                            [--version]
 
@@ -163,7 +163,7 @@ a stable UUID `uid`, and sets the title, subtitle, arg, icon, and type:
 
 ```python
 from json import dumps
-from alfred_path_results.result_item import ResultItem
+from alfred_results.result_item import ResultItem
 
 item = ResultItem.from_path("/Users/me/Downloads")
 print(dumps({"items": [item.to_alfred()]}))
@@ -190,8 +190,8 @@ Output:
 For full control over every field, construct `ResultItem` directly:
 
 ```python
-from alfred_path_results.result_item import Icon, IconResourceType, ItemType, ResultItem
-from alfred_path_results import path_to_uuid
+from alfred_results.result_item import Icon, IconResourceType, ItemType, ResultItem
+from alfred_results import path_to_uuid
 
 path = "/Users/me/Downloads"
 
@@ -208,7 +208,7 @@ item = ResultItem(
 ### Modifier key overrides
 
 ```python
-from alfred_path_results.result_item import Mod, ResultItem
+from alfred_results.result_item import Mod, ResultItem
 
 item = ResultItem.from_path(
     "/Users/me/report.pdf",
@@ -242,7 +242,7 @@ Icon()
 
 ```python
 from pathlib import Path
-from alfred_path_results import path_to_uuid
+from alfred_results import path_to_uuid
 
 uid = path_to_uuid(str(Path("~/Downloads").expanduser().resolve()))
 ```

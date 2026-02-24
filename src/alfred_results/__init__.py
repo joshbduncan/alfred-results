@@ -1,14 +1,14 @@
 """
-alfred-path-results
--------------------
+alfred-results
+--------------
 Helper package for converting filesystem paths into Alfred Script Filter
 JSON result items.
 
-The public API is exposed through :mod:`alfred_path_results.result_item` and
-:mod:`alfred_path_results.utils`, re-exported here for convenience:
+The public API is exposed through :mod:`alfred_results.result_item` and
+:mod:`alfred_results.utils`, re-exported here for convenience:
 
-    from alfred_path_results.result_item import ResultItem, Icon, Mod
-    from alfred_path_results import path_to_uuid
+    from alfred_results.result_item import ResultItem, Icon, Mod
+    from alfred_results import path_to_uuid
 
 Version information is retrieved lazily from the installed package metadata
 so that this file never needs to be updated manually when the version bumps.
@@ -40,7 +40,7 @@ def _get_version() -> str:
     from importlib.metadata import PackageNotFoundError, version
 
     try:
-        return version("alfred-path-results")
+        return version("alfred-results")
     except PackageNotFoundError:
         return "unknown"
 

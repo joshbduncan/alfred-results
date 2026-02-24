@@ -1,4 +1,4 @@
-# AGENTS.md — alfred-path-results
+# AGENTS.md — alfred-results
 
 A Python helper library that converts filesystem paths into Alfred Script Filter
 JSON result items. No runtime dependencies; targets Python ≥ 3.12.
@@ -74,7 +74,7 @@ uv run pytest -v                                     # Verbose output
 ## CLI
 
 ```bash
-uv run alfred-path-results --help
+uv run alfred-results --help
 ```
 
 ---
@@ -108,7 +108,7 @@ uv run alfred-path-results --help
 
 | Construct              | Style                        | Example                              |
 |------------------------|------------------------------|--------------------------------------|
-| Packages / modules     | `snake_case`                 | `result_item`, `alfred_path_results` |
+| Packages / modules     | `snake_case`                 | `result_item`, `alfred_results` |
 | Classes                | `PascalCase`                 | `ResultItem`, `IconResourceType`     |
 | Functions / variables  | `snake_case`                 | `parse_input`, `result_variables`    |
 | Public constants       | `UPPER_SNAKE_CASE` + `Final` | `VALID_MODIFIER_KEYS`                |
@@ -230,9 +230,9 @@ uv run alfred-path-results --help
 
 ```
 src/
-└── alfred_path_results/
+└── alfred_results/
     ├── __init__.py          # Package init; lazy __version__ + _get_version()
-    ├── __main__.py          # python -m alfred_path_results entry point
+    ├── __main__.py          # python -m alfred_results entry point
     ├── cli.py               # argparse CLI entry point
     ├── py.typed             # PEP 561 marker
     ├── utils.py             # Shared utilities (path_to_uuid, _PATH_UUID_NAMESPACE)
@@ -244,7 +244,7 @@ src/
         └── mods.py          # Mod dataclass, valid_modifiers helper
 ```
 
-New public types belong in `src/alfred_path_results/result_item/` with a
+New public types belong in `src/alfred_results/result_item/` with a
 corresponding re-export in `result_item/__init__.py` and `__all__`.
 
 Shared utilities with no CLI or Alfred-type dependencies belong in `utils.py`.

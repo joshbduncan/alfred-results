@@ -71,7 +71,7 @@ class ResultItem:
             same logical item (e.g. a UUID derived from the file path).
         arg: The argument passed to the next action in Alfred's workflow when
             this item is actioned.  Accepts either a single string or a list
-            of strings (see :data:`~alfred_path_results.result_item.ArgValue`).
+            of strings (see :data:`~alfred_results.result_item.ArgValue`).
         valid: Controls whether the item can be actioned.  ``True`` (default
             when omitted) allows actioning; ``False`` turns the item into a
             non-actionable label row (useful for section headers or error
@@ -85,8 +85,8 @@ class ResultItem:
         type: Controls how Alfred categorizes this result; see
             :class:`ItemType`.  Omit to use Alfred's default behavior.
         icon: The icon displayed next to the result row; see
-            :class:`~alfred_path_results.result_item.Icon`.
-        mods: A list of :class:`~alfred_path_results.result_item.Mod`
+            :class:`~alfred_results.result_item.Icon`.
+        mods: A list of :class:`~alfred_results.result_item.Mod`
             instances that override the item's behavior when the user holds a
             modifier key (cmd, alt, ctrl, shift, fn, or combinations).
         action: The Universal Action payload passed to Alfred when the item is
@@ -169,7 +169,7 @@ class ResultItem:
         Args:
             path: The filesystem path to convert.  May be a :class:`~pathlib.Path`
                 object or a string (including ``~``-prefixed paths).
-            mods: Optional list of :class:`~alfred_path_results.result_item.Mod`
+            mods: Optional list of :class:`~alfred_results.result_item.Mod`
                 modifier-key overrides to attach to the item.
             variables: Optional item-scoped Alfred session variables.  Defaults
                 to ``{"_path": <posix path>}`` when ``None``.

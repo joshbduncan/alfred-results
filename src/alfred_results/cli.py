@@ -1,7 +1,7 @@
 """
 cli
 ---
-Command-line interface for alfred-path-results.
+Command-line interface for alfred-results.
 
 Reads a list of filesystem paths (from stdin or a file), converts each path
 into an Alfred Script Filter result item, and writes the resulting JSON payload
@@ -10,13 +10,13 @@ to stdout.
 Usage::
 
     # Pipe paths from another command
-    find ~/Downloads -maxdepth 1 | alfred-path-results
+    find ~/Downloads -maxdepth 1 | alfred-results
 
     # Pass a newline-delimited file
-    alfred-path-results --input paths.txt
+    alfred-results --input paths.txt
 
     # Add a modifier override and session variable
-    alfred-path-results --mod cmd /tmp/out "Open in Terminal" \\
+    alfred-results --mod cmd /tmp/out "Open in Terminal" \\
         --session-var ts 2026-01-01
 
 Entry point: :func:`main`.

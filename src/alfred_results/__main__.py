@@ -1,14 +1,14 @@
 """
 __main__
 --------
-Entry point for running alfred-path-results as a module.
+Entry point for running alfred-results as a module.
 
 Allows the package to be invoked directly via the Python interpreter::
 
-    python -m alfred_path_results [ARGS...]
+    python -m alfred_results [ARGS...]
 
-This is equivalent to running the ``alfred-path-results`` console script.
-All command-line arguments are forwarded to :func:`~alfred_path_results.cli.main`,
+This is equivalent to running the ``alfred-results`` console script.
+All command-line arguments are forwarded to :func:`~alfred_results.cli.main`,
 which handles parsing and exits with the appropriate status code.
 """
 
