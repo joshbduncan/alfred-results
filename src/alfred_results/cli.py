@@ -3,9 +3,37 @@ cli
 ---
 Command-line interface for alfred-results.
 
-Reads a list of filesystem paths (from stdin or a file), converts each path
-into an Alfred Script Filter result item, and writes the resulting JSON payload
-to stdout.
+Reads a list of filesystem paths from stdin or a file, converts each path into
+an Alfred Script Filter result item via :class:`~alfred_results.result_item.ResultItem`,
+and writes the complete Script Filter JSON payload to stdout via
+:class:`~alfred_results.payload.ScriptFilterPayload`.
+
+Alfred Script Filters are workflow nodes that run a script and read its stdout
+as a JSON payload describing a list of result items to display in Alfred's UI.
+This CLI acts as a bridge between shell pipelines (e.g. ``find``, ``mdfind``,
+``ls``) and that JSON format, so Alfred workflows can be built without writing
+Python.
+
+Arguments
+---------
+FILE
+    Path to a newline-delimited file of filesystem paths, or ``-`` to read
+    from stdin (the default when no file is given).
+--mod MOD ARG SUBTITLE
+    Add a modifier-key override to every result item.  ``MOD`` must be a valid
+    Alfred modifier combo (e.g. ``cmd``, ``alt``, ``cmd+shift``).  May be
+    repeated to add multiple modifiers.
+--result-var KEY VALUE
+    Add an Alfred result-item variable to every item.  ``VALUE`` is first
+    resolved as a :class:`~pathlib.Path` attribute name (e.g. ``name``,
+    ``suffix``, ``as_posix``); if no such attribute exists the raw string is
+    used instead.  May be repeated.
+--session-var KEY VALUE
+    Add a top-level Alfred session variable to the payload.  Session variables
+    are available to all downstream workflow objects regardless of which item
+    the user selects.  May be repeated.
+--version
+    Print the installed package version and exit.
 
 Usage::
 
@@ -15,9 +43,12 @@ Usage::
     # Pass a newline-delimited file
     alfred-results paths.txt
 
-    # Add a modifier override and session variable
+    # Add a modifier override and a session variable
     alfred-results --mod cmd /tmp/out "Open in Terminal" \\
         --session-var ts 2026-01-01
+
+    # Attach per-item variables using Path attribute names
+    alfred-results paths.txt --result-var ext suffix --result-var base stem
 
 Entry point: :func:`main`.
 """
@@ -32,6 +63,7 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Sequence
+    from typing import TextIO
 
 from . import _get_version
 from .payload import ScriptFilterPayload
@@ -39,7 +71,7 @@ from .result_item import Mod, ResultItem
 
 
 @contextmanager
-def _open_input(val: str) -> Generator[Any, None, None]:
+def _open_input(val: str) -> Generator[TextIO, None, None]:
     """Return an open text-file context manager for *val*.
 
     Yields ``sys.stdin`` directly when *val* is ``"-"``; otherwise opens the
@@ -50,7 +82,7 @@ def _open_input(val: str) -> Generator[Any, None, None]:
         val: A filesystem path, or ``"-"`` for stdin.
 
     Yields:
-        A readable text-file object.
+        A readable text-mode file object (``sys.stdin`` or an opened file).
 
     Raises:
         OSError: If *val* is a path that cannot be opened.
@@ -142,13 +174,10 @@ def parse_result_vars(p: Path, val: list[list[str]] | None) -> dict[str, str] | 
 
     Returns:
         A ``{variable_name: resolved_str_value}`` dict, or ``None`` when
-        *val* is ``None``.
-
-    Raises:
-        AttributeError: If any ``path_attribute`` name is not valid on
-            :class:`~pathlib.Path`.
+        *val* is ``None``.  When a ``path_attribute`` name is not a valid
+        :class:`~pathlib.Path` attribute the raw ``VALUE`` string is used
+        as-is rather than raising.
     """
-    # TODO: only check Path attrs if '--format=paths'
     if val is None:
         return None
     d: dict[str, str] = {}
@@ -272,7 +301,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = create_parser()
     args = parser.parse_args(argv)
 
-    # process stdin (or --input path)
+    # process stdin or positional FILE argument
     if args.file == "-" and sys.stdin.isatty():
         parser.error("no stdin provided")
 
@@ -295,7 +324,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     except ValueError as e:
         parser.error(str(e))
 
-    # build alfred result items dict
+    # build alfred result items
     items: list[ResultItem] = []
     for i in paths:
         p = Path(i)
