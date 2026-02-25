@@ -62,7 +62,10 @@ class Icon:
 
         resource_type: Optional modifier that changes how Alfred interprets
             ``path``.  Must be ``None`` when ``path`` is ``None``; setting it
-            without a path raises :exc:`ValueError` in :meth:`to_dict`.
+            without a path raises :exc:`ValueError` on construction.
+
+    Raises:
+        ValueError: If ``resource_type`` is set but ``path`` is ``None``.
 
     Example::
 
@@ -79,6 +82,15 @@ class Icon:
     path: str | None = None
     resource_type: IconResourceType | None = None
 
+    def __post_init__(self) -> None:
+        """Validate field constraints after dataclass initialization.
+
+        Raises:
+            ValueError: If ``resource_type`` is set but ``path`` is ``None``.
+        """
+        if self.path is None and self.resource_type is not None:
+            raise ValueError("Icon.resource_type requires Icon.path.")
+
     def to_dict(self) -> dict[str, Any] | None:
         """Serialize to Alfred's ``icon`` object shape.
 
@@ -92,9 +104,6 @@ class Icon:
             are set.
             ``None`` when ``path`` is ``None`` (icon should be omitted).
 
-        Raises:
-            ValueError: If ``resource_type`` is set but ``path`` is ``None``.
-
         Example::
 
             icon = Icon(path="~/Desktop", resource_type=IconResourceType.FILEICON)
@@ -102,8 +111,6 @@ class Icon:
             # {"type": "fileicon", "path": "~/Desktop"}
         """
         if self.path is None:
-            if self.resource_type is not None:
-                raise ValueError("Icon.resource_type requires Icon.path.")
             return None
 
         if self.resource_type is None:
