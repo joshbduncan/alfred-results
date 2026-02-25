@@ -88,7 +88,11 @@ class ResultItem:
             :class:`~alfred_results.result_item.Icon`.
         mods: A list of :class:`~alfred_results.result_item.Mod`
             instances that override the item's behavior when the user holds a
-            modifier key (cmd, alt, ctrl, shift, fn, or combinations).
+            modifier key (cmd, alt, ctrl, shift, fn, or combinations).  Each
+            :attr:`~Mod.key` in the list must be unique; duplicate keys raise
+            :exc:`ValueError` on construction because :meth:`to_dict` converts
+            the list to a dict keyed by :attr:`~Mod.key` and duplicate entries
+            would silently overwrite each other.
         action: The Universal Action payload passed to Alfred when the item is
             actioned via Universal Actions.  Can be a string, a list of
             strings, or a typed mapping (``{"file": [...], "url": [...]}``)
@@ -142,9 +146,19 @@ class ResultItem:
 
         Raises:
             ValueError: If :attr:`title` is empty or contains only whitespace.
+            ValueError: If :attr:`mods` contains duplicate :attr:`~Mod.key`
+                values.
         """
         if not self.title.strip():
             raise ValueError("ResultItem.title must be a non-empty string.")
+        if self.mods is not None:
+            seen: set[str] = set()
+            for mod in self.mods:
+                if mod.key in seen:
+                    raise ValueError(
+                        f"ResultItem.mods contains duplicate modifier key {mod.key!r}."
+                    )
+                seen.add(mod.key)
 
     @classmethod
     def from_path(
