@@ -148,11 +148,15 @@ def parse_result_vars(p: Path, val: list[list[str]] | None) -> dict[str, str] | 
         AttributeError: If any ``path_attribute`` name is not valid on
             :class:`~pathlib.Path`.
     """
+    # TODO: only check Path attrs if '--format=paths'
     if val is None:
         return None
     d: dict[str, str] = {}
     for k, v in val:
-        d[k] = str(get_path_attribute(p, v))
+        try:
+            d[k] = str(get_path_attribute(p, v))
+        except AttributeError:
+            d[k] = v
     return d
 
 
@@ -191,16 +195,24 @@ def create_parser() -> argparse.ArgumentParser:
         for ``parse_args()``.
     """
     parser = argparse.ArgumentParser(
-        description="Helper package for working with Alfred app workflows."
+        description="Helper package for working with Alfred Script Filters."
     )
 
     parser.add_argument(
-        "-i",
-        "--input",
-        metavar="FILE",
+        "file",
+        nargs="?",
         default="-",
+        metavar="FILE",
         help="input file or '-' for stdin (default: stdin)",
     )
+
+    # parser.add_argument(
+    #     "-i",
+    #     "--input",
+    #     metavar="FILE",
+    #     default="-",
+    #     help="input file or '-' for stdin (default: stdin)",
+    # )
 
     parser.add_argument(
         "-m",
@@ -212,14 +224,6 @@ def create_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
-        "--session-var",
-        nargs=2,
-        action="append",
-        metavar=("KEY", "VALUE"),
-        help="alfred session variable (ex. --session-var ts 2026-02-20T11:31:59Z)",
-    )
-
-    parser.add_argument(
         "--result-var",
         nargs=2,
         action="append",
@@ -228,6 +232,14 @@ def create_parser() -> argparse.ArgumentParser:
             "alfred result item variable from pathlib Path object"
             " (ex. --result-var path as_posix)"
         ),
+    )
+
+    parser.add_argument(
+        "--session-var",
+        nargs=2,
+        action="append",
+        metavar=("KEY", "VALUE"),
+        help="alfred session variable (ex. --session-var ts 2026-02-20T11:31:59Z)",
     )
 
     parser.add_argument(
@@ -269,14 +281,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     # process stdin (or --input path)
-    if args.input == "-" and sys.stdin.isatty():
+    if args.file == "-" and sys.stdin.isatty():
         parser.error("no stdin provided")
 
     paths: list[str] = []
     try:
-        paths = parse_input(args.input)
+        paths = parse_input(args.file)
     except OSError as e:
-        parser.error(f"can't open '{args.input}': {e.strerror}")
+        parser.error(f"can't open '{args.file}': {e.strerror}")
 
     if not paths:
         parser.error("no paths found")
@@ -296,9 +308,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     for i in paths:
         p = Path(i)
 
-        result_variables: dict[str, str] = {"_path": p.as_posix()}
         try:
-            result_variables = parse_result_vars(p, args.result_var) or result_variables
+            result_variables = parse_result_vars(p, args.result_var)
         except AttributeError as e:
             parser.error(str(e))
 
