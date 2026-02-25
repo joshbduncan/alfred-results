@@ -199,6 +199,15 @@ class ResultItem:
         p_resolved = p.expanduser().resolve()
         posix = p.as_posix()
 
+        # combine user args with defaults
+        default_variables = {
+            "_path": posix,
+            "_parent": p.parent.as_posix(),
+        }
+        user_variables: dict[str, str] = (
+            dict(variables.items()) if variables is not None else {}
+        )
+
         return cls(
             uid=path_to_uuid(str(p_resolved)),
             title=p.name or posix,
@@ -207,7 +216,7 @@ class ResultItem:
             icon=Icon(path=str(p_resolved), resource_type=IconResourceType.FILEICON),
             type=ItemType.FILE if p.is_file() else ItemType.DEFAULT,
             mods=mods,
-            variables=variables if variables is not None else {"_path": posix},
+            variables=default_variables | user_variables,
         )
 
     def to_alfred(self) -> dict[str, Any]:

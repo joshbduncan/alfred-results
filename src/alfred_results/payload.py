@@ -55,6 +55,21 @@ class ScriptFilterPayload:
     items: list[ResultItem] | None = None
 
     def to_alfred(self) -> str:
+        from importlib.metadata import PackageNotFoundError, metadata, version
+
+        try:
+            package_name = metadata(str(__package__))["Name"]
+            package_version = version(package_name)
+        except PackageNotFoundError:
+            package_name = "alfred-results"
+            package_version = ""
+
+        # combine user session variables with defaults
+        default_session_variables = {
+            "script": package_name,
+            "version": package_version,
+        }
+
         data: dict[str, Any] = {}
 
         if self.cache is not None:
@@ -64,7 +79,9 @@ class ScriptFilterPayload:
         if self.skipknowledge is not None:
             data["skipknowledge"] = self.skipknowledge
         if self.variables is not None:
-            data["variables"] = self.variables
+            data["variables"] = default_session_variables | self.variables
+        else:
+            data["variables"] = default_session_variables
         if self.items is not None:
             data["items"] = [item.to_alfred() for item in self.items]
 
