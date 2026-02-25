@@ -175,18 +175,21 @@ class ResultItem:
         ``uid``, setting ``title``, ``subtitle``, ``arg``, ``icon``, and
         ``type`` automatically.
 
-        The default ``variables`` dict contains a single ``"_path"`` key set
-        to the POSIX representation of the (unresolved) input path, matching
-        the CLI's default behavior.  Pass an explicit ``variables`` mapping to
-        override this.
+        The default ``variables`` dict always contains ``"_path"`` (the POSIX
+        representation of the input path) and ``"_parent"`` (the POSIX path of
+        the parent directory).  Pass an explicit ``variables`` mapping to merge
+        additional keys or override the defaults; user-supplied values win on
+        collision.
 
         Args:
             path: The filesystem path to convert.  May be a :class:`~pathlib.Path`
                 object or a string (including ``~``-prefixed paths).
             mods: Optional list of :class:`~alfred_results.result_item.Mod`
                 modifier-key overrides to attach to the item.
-            variables: Optional item-scoped Alfred session variables.  Defaults
-                to ``{"_path": <posix path>}`` when ``None``.
+            variables: Optional item-scoped Alfred session variables merged over
+                the defaults (``{"_path": ..., "_parent": ...}``) when provided.
+                Defaults to the built-in ``_path`` and ``_parent`` keys when
+                ``None``.
 
         Returns:
             A fully-populated :class:`ResultItem` ready for serialization via
@@ -203,7 +206,7 @@ class ResultItem:
             #   "arg": "/Users/me/Downloads",
             #   "type": "default",
             #   "icon": {"type": "fileicon", "path": "/Users/me/Downloads"},
-            #   "variables": {"_path": "/Users/me/Downloads"}
+            #   "variables": {"_path": "/Users/me/Downloads", "_parent": "/Users/me"}
             # }
         """
         from ..utils import path_to_uuid
@@ -213,7 +216,7 @@ class ResultItem:
         p_resolved = p.expanduser().resolve()
         posix = p.as_posix()
 
-        # combine user args with defaults
+        # Merge caller-supplied variables over built-in defaults; caller wins.
         default_variables = {
             "_path": posix,
             "_parent": p.parent.as_posix(),
