@@ -3,8 +3,15 @@ utils
 -----
 General-purpose utilities for alfred-results.
 
-Functions here have no dependency on the CLI or Alfred-specific types and
-can be imported independently of the rest of the package.
+Provides shared helpers that have no dependency on the CLI or Alfred-specific
+types and can be imported independently of the rest of the package.
+
+Alfred Script Filter items optionally carry a ``uid`` field — a stable,
+unique identifier that Alfred uses to learn from the user's selection
+history and reorder results across invocations.  :func:`path_to_uuid`
+derives a deterministic UUID v5 from a resolved filesystem path so that
+the same path always produces the same ``uid``, enabling Alfred's learning
+without any external state storage.
 """
 
 from __future__ import annotations
