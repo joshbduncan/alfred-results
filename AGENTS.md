@@ -190,17 +190,26 @@ uv run alfred-results --help
 
 ---
 
-## Serialization (`to_alfred()` / `payload()` methods)
+## Serialization (`to_dict()` / `to_json()` methods)
 
-- Return `dict[str, Any]`; never use `dataclasses.asdict()` (it recurses too
-  eagerly and loses control).
+Fragment models (`Icon`, `ScriptFilterCache`, `Mod`, `ResultItem`) each produce
+a slice of the Alfred JSON tree and implement `to_dict()`. `ScriptFilterPayload`
+is the only type that is ever the final output and implements both methods.
+
+- `to_dict() -> dict[str, Any]` — implemented by every model; returns a
+  JSON-serializable dict fragment for composition into the parent payload.
+  Never use `dataclasses.asdict()` (it recurses too eagerly and loses control).
+- `to_json(**kwargs) -> str` — implemented by `ScriptFilterPayload` only;
+  calls `to_dict()` and passes the result to `json.dumps()`. Any `**kwargs`
+  are forwarded to `json.dumps()` (e.g. `indent=2`, `sort_keys=True`).
+  This is the intended user-facing method for producing Alfred output.
 - Gate every optional field with `if field is not None:` before adding it to the
-  dict — omit falsy/unset keys from output.
-- Return `None` from `to_alfred()` when the whole object should be omitted from
-  the parent payload (e.g. `Icon.to_alfred()` returns `None` when no path is set).
+  dict — omit unset keys from output entirely.
+- Return `None` from `to_dict()` when the whole object should be omitted from
+  the parent payload (only `Icon.to_dict()` does this, when no path is set).
 
   ```python
-  def to_alfred(self) -> dict[str, Any]:
+  def to_dict(self) -> dict[str, Any]:
       out: dict[str, Any] = {"title": self.title}
       if self.subtitle is not None:
           out["subtitle"] = self.subtitle
@@ -234,6 +243,7 @@ src/
     ├── __init__.py          # Package init; lazy __version__ + _get_version()
     ├── __main__.py          # python -m alfred_results entry point
     ├── cli.py               # argparse CLI entry point
+    ├── payload.py           # ScriptFilterPayload, ScriptFilterCache
     ├── py.typed             # PEP 561 marker
     ├── utils.py             # Shared utilities (path_to_uuid, _PATH_UUID_NAMESPACE)
     └── result_item/
