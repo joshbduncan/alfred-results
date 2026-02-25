@@ -47,7 +47,7 @@ class Icon:
     Represents the optional ``"icon"`` object attached to a Script Filter
     result item or modifier entry.  When ``path`` is ``None`` the icon is
     considered unset and :meth:`to_dict` returns ``None``, signalling the
-        caller to omit the key entirely.
+    caller to omit the key entirely.
 
     Attributes:
         path: The icon resource path or identifier.
