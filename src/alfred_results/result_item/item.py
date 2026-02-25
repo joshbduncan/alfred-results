@@ -59,7 +59,7 @@ class ResultItem:
 
     Only :attr:`title` is required by Alfred's schema.  All other fields are
     optional; unset fields (``None``) are omitted from the serialized JSON
-    produced by :meth:`to_alfred`.
+    produced by :meth:`to_dict`.
 
     Attributes:
         title: The primary text shown in the Alfred result row.  Must be a
@@ -115,7 +115,7 @@ class ResultItem:
                 resource_type=IconResourceType.FILEICON,
             ),
         )
-        payload = item.to_alfred()
+        payload = item.to_dict()
     """
 
     title: str
@@ -176,12 +176,12 @@ class ResultItem:
 
         Returns:
             A fully-populated :class:`ResultItem` ready for serialization via
-            :meth:`to_alfred`.
+            :meth:`to_dict`.
 
         Example::
 
             item = ResultItem.from_path("/Users/me/Downloads")
-            item.to_alfred()
+            item.to_dict()
             # {
             #   "title": "Downloads",
             #   "uid": "...",
@@ -219,7 +219,7 @@ class ResultItem:
             variables=default_variables | user_variables,
         )
 
-    def to_alfred(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize this item to Alfred's Script Filter JSON shape.
 
         Builds the dict that represents one entry in Alfred's ``"items"``
@@ -238,7 +238,7 @@ class ResultItem:
         Example::
 
             item = ResultItem(title="foo", arg="bar", uid="abc-123")
-            item.to_alfred()
+            item.to_dict()
             # {"title": "foo", "arg": "bar", "uid": "abc-123"}
         """
         data: dict[str, Any] = {"title": self.title}
@@ -261,12 +261,12 @@ class ResultItem:
             data["type"] = str(self.type)
 
         if self.icon is not None:
-            icon_obj = self.icon.to_alfred()
+            icon_obj = self.icon.to_dict()
             if icon_obj is not None:
                 data["icon"] = icon_obj
 
         if self.mods:
-            data["mods"] = {mod.key: mod.payload() for mod in self.mods}
+            data["mods"] = {mod.key: mod.to_dict() for mod in self.mods}
 
         if self.action is not None:
             data["action"] = self.action

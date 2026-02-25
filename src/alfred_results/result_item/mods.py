@@ -77,8 +77,8 @@ class Mod:
 
     Each :class:`Mod` represents the behavior change that occurs when the
     user holds a specific modifier key (or combination) while the result row
-    is highlighted.  Alfred uses :attr:`key` as the JSON dict key and the
-    output of :meth:`payload` as its value.
+    is highlighted.      Alfred uses :attr:`key` as the JSON dict key and the
+    output of :meth:`to_dict` as its value.
 
     Attributes:
         key: The modifier combo string used as the JSON key in ``"mods"``.
@@ -106,7 +106,7 @@ class Mod:
     Example::
 
         mod = Mod(key="cmd", valid=True, arg="/tmp/out", subtitle="Open in Terminal")
-        mod.payload()
+        mod.to_dict()
         # {"valid": True, "arg": "/tmp/out", "subtitle": "Open in Terminal"}
     """
 
@@ -127,8 +127,8 @@ class Mod:
         if self.key not in _VALID_MOD_COMBOS:
             raise ValueError(f"Invalid modifier key combo: {self.key!r}.")
 
-    def payload(self) -> dict[str, Any]:
-        """Serialize to the Alfred mod payload dict (the value under the mod key).
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize to the Alfred mod dict (the value under the mod key).
 
         Builds the dict that Alfred assigns to :attr:`key` inside a result
         item's ``"mods"`` object.  Only non-``None`` fields are included.
@@ -140,7 +140,7 @@ class Mod:
 
         Example::
 
-            Mod(key="alt", subtitle="Preview only", valid=False).payload()
+            Mod(key="alt", subtitle="Preview only", valid=False).to_dict()
             # {"subtitle": "Preview only", "valid": False}
         """
         data: dict[str, Any] = {}
@@ -151,7 +151,7 @@ class Mod:
         if self.subtitle is not None:
             data["subtitle"] = self.subtitle
         if self.icon is not None:
-            icon_obj = self.icon.to_alfred()
+            icon_obj = self.icon.to_dict()
             if icon_obj is not None:
                 data["icon"] = icon_obj
         if self.variables is not None:

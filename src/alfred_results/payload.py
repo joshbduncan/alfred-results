@@ -68,7 +68,7 @@ class ScriptFilterCache:
     Example::
 
         cache = ScriptFilterCache(seconds=60, loosereload=True)
-        cache.to_alfred()
+        cache.to_dict()
         # {"seconds": 60, "loosereload": True}
     """
 
@@ -87,7 +87,7 @@ class ScriptFilterCache:
                 f" {_CACHE_SECONDS_MAX}, got {self.seconds!r}."
             )
 
-    def to_alfred(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize to Alfred's ``cache`` object shape.
 
         Returns:
@@ -96,10 +96,10 @@ class ScriptFilterCache:
 
         Example::
 
-            ScriptFilterCache(seconds=3600).to_alfred()
+            ScriptFilterCache(seconds=3600).to_dict()
             # {"seconds": 3600}
 
-            ScriptFilterCache(seconds=60, loosereload=True).to_alfred()
+            ScriptFilterCache(seconds=60, loosereload=True).to_dict()
             # {"seconds": 60, "loosereload": True}
         """
         data: dict[str, Any] = {"seconds": self.seconds}
@@ -112,9 +112,9 @@ class ScriptFilterCache:
 class ScriptFilterPayload:
     """The complete Alfred Script Filter top-level JSON payload.
 
-    Wraps the full response sent from a Script Filter to Alfred.  Serialize
-    via :meth:`to_alfred` to obtain a JSON-ready dict, then pass it to
-    :func:`json.dumps` for output.
+    Wraps the full response sent from a Script Filter to Alfred.  Use
+    :meth:`to_json` to produce the final JSON string for Alfred, or
+    :meth:`to_dict` to obtain a plain Python dict.
 
     Attributes:
         cache: Optional caching configuration; see :class:`ScriptFilterCache`.
@@ -133,13 +133,12 @@ class ScriptFilterPayload:
 
     Example::
 
-        from json import dumps
         payload = ScriptFilterPayload(
             rerun=1.0,
             variables={"mode": "search"},
             items=[ResultItem(title="foo", arg="bar")],
         )
-        dumps(payload.to_alfred())
+        print(payload.to_json())
     """
 
     cache: ScriptFilterCache | None = None
@@ -160,13 +159,13 @@ class ScriptFilterPayload:
                 f" {_RERUN_MAX}, got {self.rerun!r}."
             )
 
-    def to_alfred(self) -> dict[str, Any]:
-        """Serialize to Alfred's Script Filter top-level JSON shape.
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize to Alfred's Script Filter top-level JSON shape as a dict.
 
         Builds the top-level dict that Alfred's Script Filter expects.  Only
         fields that have been explicitly set (i.e. are not ``None``) are
-        included.  Pass the result to :func:`json.dumps` to produce the final
-        JSON string.
+        included.  To produce the final JSON string for Alfred, use
+        :meth:`to_json` instead.
 
         Returns:
             A JSON-serializable dict conforming to the Alfred Script Filter
@@ -174,10 +173,9 @@ class ScriptFilterPayload:
 
         Example::
 
-            from json import dumps
             payload = ScriptFilterPayload(items=[ResultItem(title="foo")])
-            dumps(payload.to_alfred())
-            # '{"variables": {...}, "items": [{"title": "foo"}]}'
+            payload.to_dict()
+            # {"variables": {...}, "items": [{"title": "foo"}]}
         """
         from importlib.metadata import PackageNotFoundError, metadata, version
 
@@ -197,7 +195,7 @@ class ScriptFilterPayload:
         data: dict[str, Any] = {}
 
         if self.cache is not None:
-            data["cache"] = self.cache.to_alfred()
+            data["cache"] = self.cache.to_dict()
         if self.rerun is not None:
             data["rerun"] = self.rerun
         if self.skipknowledge is not None:
@@ -207,6 +205,36 @@ class ScriptFilterPayload:
         else:
             data["variables"] = default_session_variables
         if self.items is not None:
-            data["items"] = [item.to_alfred() for item in self.items]
+            data["items"] = [item.to_dict() for item in self.items]
 
         return data
+
+    def to_json(self, **kwargs: Any) -> str:
+        """Serialize to the Alfred Script Filter JSON string.
+
+        Convenience method that calls :meth:`to_dict` and passes the result
+        to :func:`json.dumps`.  Any keyword arguments are forwarded directly
+        to :func:`json.dumps`, allowing control over formatting.
+
+        Args:
+            **kwargs: Keyword arguments forwarded to :func:`json.dumps`
+                (e.g. ``indent=2``, ``sort_keys=True``,
+                ``separators=(",", ":")``)
+
+        Returns:
+            A JSON string conforming to the Alfred Script Filter top-level
+            payload schema.
+
+        Example::
+
+            payload = ScriptFilterPayload(items=[ResultItem(title="foo")])
+
+            # Compact output for Alfred
+            print(payload.to_json())
+
+            # Pretty-printed for debugging
+            print(payload.to_json(indent=2))
+        """
+        from json import dumps
+
+        return dumps(self.to_dict(), **kwargs)

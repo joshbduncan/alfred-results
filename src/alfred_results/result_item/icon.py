@@ -46,13 +46,13 @@ class Icon:
 
     Represents the optional ``"icon"`` object attached to a Script Filter
     result item or modifier entry.  When ``path`` is ``None`` the icon is
-    considered unset and :meth:`to_alfred` returns ``None``, signalling the
-    caller to omit the key entirely.
+    considered unset and :meth:`to_dict` returns ``None``, signalling the
+        caller to omit the key entirely.
 
     Attributes:
         path: The icon resource path or identifier.
 
-            * ``None`` — no icon; :meth:`to_alfred` returns ``None``.
+            * ``None`` — no icon; :meth:`to_dict` returns ``None``.
             * Relative filesystem path (from the workflow bundle root) when
               ``resource_type`` is ``None``.
             * Absolute or ``~``-prefixed filesystem path when
@@ -62,7 +62,7 @@ class Icon:
 
         resource_type: Optional modifier that changes how Alfred interprets
             ``path``.  Must be ``None`` when ``path`` is ``None``; setting it
-            without a path raises :exc:`ValueError` in :meth:`to_alfred`.
+            without a path raises :exc:`ValueError` in :meth:`to_dict`.
 
     Example::
 
@@ -79,11 +79,11 @@ class Icon:
     path: str | None = None
     resource_type: IconResourceType | None = None
 
-    def to_alfred(self) -> dict[str, Any] | None:
+    def to_dict(self) -> dict[str, Any] | None:
         """Serialize to Alfred's ``icon`` object shape.
 
         Produces the dict that is assigned to the ``"icon"`` key of a result
-        item or modifier payload.  Returns ``None`` when no icon is defined so
+        item or modifier entry.  Returns ``None`` when no icon is defined so
         callers can gate inclusion with a simple truthiness check.
 
         Returns:
@@ -98,7 +98,7 @@ class Icon:
         Example::
 
             icon = Icon(path="~/Desktop", resource_type=IconResourceType.FILEICON)
-            icon.to_alfred()
+            icon.to_dict()
             # {"type": "fileicon", "path": "~/Desktop"}
         """
         if self.path is None:

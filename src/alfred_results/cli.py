@@ -27,7 +27,6 @@ from __future__ import annotations
 import argparse
 import sys
 from contextlib import contextmanager
-from json import dumps
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -312,7 +311,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     payload = ScriptFilterPayload(variables=session_vars, items=items)
 
     # output alfred json
-    sys.stdout.write(dumps(payload.to_alfred()))
+    sys.stdout.write(payload.to_json())
 
     return 0
 
