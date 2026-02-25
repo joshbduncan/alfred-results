@@ -77,7 +77,7 @@ class Mod:
 
     Each :class:`Mod` represents the behavior change that occurs when the
     user holds a specific modifier key (or combination) while the result row
-    is highlighted.      Alfred uses :attr:`key` as the JSON dict key and the
+    is highlighted.  Alfred uses :attr:`key` as the JSON dict key and the
     output of :meth:`to_dict` as its value.
 
     Attributes:
