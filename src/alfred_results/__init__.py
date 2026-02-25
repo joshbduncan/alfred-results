@@ -4,11 +4,12 @@ alfred-results
 Helper package for converting filesystem paths into Alfred Script Filter
 JSON result items.
 
-The public API is exposed through :mod:`alfred_results.result_item` and
-:mod:`alfred_results.utils`, re-exported here for convenience:
+The public API is exposed through :mod:`alfred_results.result_item`,
+:mod:`alfred_results.payload`, and :mod:`alfred_results.utils`,
+re-exported here for convenience:
 
+    from alfred_results import ScriptFilterCache, ScriptFilterPayload, path_to_uuid
     from alfred_results.result_item import ResultItem, Icon, Mod
-    from alfred_results import path_to_uuid
 
 Version information is retrieved lazily from the installed package metadata
 so that this file never needs to be updated manually when the version bumps.
@@ -21,9 +22,10 @@ When the package is not installed (e.g. running from source via PYTHONPATH),
 
 from __future__ import annotations
 
-from .payload import ScriptFilterPayload
+from .payload import ScriptFilterCache, ScriptFilterPayload
+from .utils import path_to_uuid
 
-__all__ = ["ScriptFilterPayload"]
+__all__ = ["ScriptFilterCache", "ScriptFilterPayload", "path_to_uuid"]
 
 
 def _get_version() -> str:

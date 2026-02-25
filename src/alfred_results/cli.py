@@ -13,7 +13,7 @@ Usage::
     find ~/Downloads -maxdepth 1 | alfred-results
 
     # Pass a newline-delimited file
-    alfred-results --input paths.txt
+    alfred-results paths.txt
 
     # Add a modifier override and session variable
     alfred-results --mod cmd /tmp/out "Open in Terminal" \\
@@ -27,6 +27,7 @@ from __future__ import annotations
 import argparse
 import sys
 from contextlib import contextmanager
+from json import dumps
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -206,14 +207,6 @@ def create_parser() -> argparse.ArgumentParser:
         help="input file or '-' for stdin (default: stdin)",
     )
 
-    # parser.add_argument(
-    #     "-i",
-    #     "--input",
-    #     metavar="FILE",
-    #     default="-",
-    #     help="input file or '-' for stdin (default: stdin)",
-    # )
-
     parser.add_argument(
         "-m",
         "--mod",
@@ -261,7 +254,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     Processing steps:
 
     1. Parse command-line arguments.
-    2. Read paths from stdin or ``--input`` file via :func:`parse_input`.
+    2. Read paths from stdin or a positional ``FILE`` argument via :func:`parse_input`.
     3. Optionally parse ``--session-var`` pairs into top-level variables.
     4. Optionally parse ``--mod`` triples into modifier overrides.
     5. For each path: build an :class:`~result_item.Icon`, resolve any
@@ -319,7 +312,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     payload = ScriptFilterPayload(variables=session_vars, items=items)
 
     # output alfred json
-    sys.stdout.write(payload.to_alfred())
+    sys.stdout.write(dumps(payload.to_alfred()))
 
     return 0
 
