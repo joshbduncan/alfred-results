@@ -505,15 +505,15 @@ data = payload.to_dict()
 
 ---
 
-### Error payloads 🚨
+### Info payloads 💬
 
-`ScriptFilterPayload.error()` builds a single-item payload containing a non-actionable result (`valid=False`). Use it to surface problems to the user through Alfred's result list without leaving the workflow.
+`ScriptFilterPayload.info()` builds a single-item payload containing a non-actionable result (`valid=False`). Use it to communicate a status or message to the user through Alfred's result list — "No results found", "Connection failed", or anything similar.
 
 ```python
 from alfred_results.payload import ScriptFilterPayload
 
 # Title only
-payload = ScriptFilterPayload.error("No results found")
+payload = ScriptFilterPayload.info("No results found")
 print(payload.to_json())
 ```
 
@@ -529,7 +529,7 @@ print(payload.to_json())
 Add an optional subtitle for more context:
 
 ```python
-payload = ScriptFilterPayload.error(
+payload = ScriptFilterPayload.info(
     "Connection failed",
     "Check your network and try again",
 )
@@ -541,7 +541,7 @@ Pass a custom icon with the keyword-only `icon` argument:
 from alfred_results.payload import ScriptFilterPayload
 from alfred_results.result_item import Icon
 
-payload = ScriptFilterPayload.error(
+payload = ScriptFilterPayload.info(
     "API error",
     "Received HTTP 500",
     icon=Icon(path="./icons/error.png"),
@@ -640,7 +640,7 @@ print("cmd+cmd" in combos)   # False
 
 | Method | Signature | Description |
 |---|---|---|
-| `error` | `(title, subtitle="", *, icon=None)` | Single non-actionable item payload for surfacing errors |
+| `info` | `(title, subtitle="", *, icon=None)` | Single non-actionable item payload for messages and status |
 
 ### `ItemType` values
 

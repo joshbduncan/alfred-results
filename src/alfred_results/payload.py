@@ -160,28 +160,29 @@ class ScriptFilterPayload:
             )
 
     @classmethod
-    def error(
+    def info(
         cls,
         title: str,
         subtitle: str = "",
         *,
         icon: Icon | None = None,
     ) -> ScriptFilterPayload:
-        """Build a single-item error payload.
+        """Build a single-item informational payload.
 
         Convenience factory that wraps ``title`` and an optional ``subtitle``
         in a non-actionable :class:`~alfred_results.result_item.ResultItem`
         (``valid=False``) and returns a :class:`ScriptFilterPayload` containing
-        only that item.  Intended for surfaces where the script needs to report
-        a problem to the user through Alfred's result list.
+        only that item.  Intended for surfaces where the script needs to
+        communicate a status or message to the user through Alfred's result
+        list, such as "No results found" or "Connection failed".
 
         Args:
-            title: The primary error message shown in the Alfred result row.
+            title: The primary message shown in the Alfred result row.
             subtitle: Optional secondary text shown below the title.  An empty
                 string (the default) is treated as unset and omitted from the
                 serialized JSON.
-            icon: Optional icon to display next to the error row.  When
-                ``None`` (the default) no icon key is emitted.
+            icon: Optional icon to display next to the row.  When ``None``
+                (the default) no icon key is emitted.
 
         Returns:
             A :class:`ScriptFilterPayload` containing a single non-actionable
@@ -189,12 +190,12 @@ class ScriptFilterPayload:
 
         Example::
 
-            # Minimal error
-            payload = ScriptFilterPayload.error("No results found")
+            # Minimal informational message
+            payload = ScriptFilterPayload.info("No results found")
             print(payload.to_json())
 
             # With subtitle and custom icon
-            payload = ScriptFilterPayload.error(
+            payload = ScriptFilterPayload.info(
                 "Connection failed",
                 "Check your network and try again",
                 icon=Icon(path="./icons/error.png"),
