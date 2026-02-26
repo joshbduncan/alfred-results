@@ -30,6 +30,11 @@ FILE
         A CSV file with a header row.  The ``title`` column is required;
         ``subtitle``, ``uid``, ``arg``, ``type``, and ``icon`` are optional.
         Additional columns are ignored.
+    ``json``
+        A JSON array of objects.  Each object must have a ``"title"`` key;
+        ``"subtitle"``, ``"uid"``, ``"arg"``, ``"type"``, and ``"icon"`` are
+        optional.  Additional keys are ignored.  Useful for piping output
+        from tools like ``jq``, ``gh``, or ``brew info --json``.
     ``string``
         One arbitrary string per line.  Each line becomes the ``title`` of a
         plain :class:`~alfred_results.result_item.ResultItem` with no path
@@ -68,6 +73,12 @@ Usage::
 
     # Read a CSV file (title column required)
     alfred-results --input-format csv data.csv
+
+    # Read a JSON array of objects (title key required)
+    alfred-results --input-format json data.json
+
+    # Pipe JSON from another tool
+    gh repo list --json name,url | alfred-results --input-format json
 
     # Read plain strings, one per line
     alfred-results --input-format string labels.txt
@@ -172,6 +183,57 @@ def parse_input_csv(val: str, *, delimiter: str = ",") -> list[dict[str, str]]:
     with _open_input(val) as f:
         reader = csv.DictReader(f, delimiter=delimiter)
         return list(reader)
+
+
+def parse_input_json(val: str) -> list[dict[str, str]]:
+    """Read a JSON array of objects from stdin or a file path into a list of dicts.
+
+    The input must be a JSON array where every element is an object (dict).
+    Each object is returned as-is; callers are responsible for field-level
+    validation.  The ``title`` key is required by the ``json`` format handler
+    in :func:`main` and an error is raised there if it is absent.
+
+    Args:
+        val: A filesystem path to a JSON file, or ``"-"`` to read from stdin.
+
+    Returns:
+        A list of :class:`dict` objects, one per element in the JSON array.
+
+    Raises:
+        OSError: If ``val`` is a file path that cannot be opened (e.g. does
+            not exist or permission denied).
+        ValueError: If the input is not valid JSON, or the top-level value is
+            not an array, or any element is not a JSON object.
+
+    Example::
+
+        # Given a file containing:
+        # [{"title": "Downloads", "arg": "/Users/me/Downloads", "subtitle": "Home"}]
+        parse_input_json("data.json")
+        # [{"title": "Downloads", "arg": "/Users/me/Downloads", "subtitle": "Home"}]
+    """
+    import json
+
+    with _open_input(val) as f:
+        try:
+            data = json.load(f)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"invalid JSON: {exc}") from exc
+
+    if not isinstance(data, list):
+        raise ValueError(
+            f"json input must be a JSON array, got {type(data).__name__!r}"
+        )
+
+    result: list[dict[str, str]] = []
+    for i, item in enumerate(data):
+        if not isinstance(item, dict):
+            raise ValueError(
+                f"json input element {i} must be an object, got {type(item).__name__!r}"
+            )
+        result.append({str(k): str(v) for k, v in item.items()})
+
+    return result
 
 
 def parse_session_vars(val: list[list[str]] | None) -> dict[str, str]:
@@ -283,9 +345,9 @@ def create_parser() -> argparse.ArgumentParser:
     """
     parser = argparse.ArgumentParser(
         description=(
-            "Builds Alfred Script Filter JSON from paths, CSV rows, or plain strings."
-            " Drop it into any Alfred workflow to turn shell output into a list of"
-            " results Alfred can show and act on."
+            "Builds Alfred Script Filter JSON from paths, CSV rows, JSON objects,"
+            " or plain strings. Drop it into any Alfred workflow to turn shell"
+            " output into a list of results Alfred can show and act on."
         )
     )
 
@@ -300,11 +362,11 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "-f",
         "--input-format",
-        choices=["path", "csv", "string"],
+        choices=["path", "csv", "json", "string"],
         default="path",
         dest="input_format",
         metavar="FORMAT",
-        help="input data format: path (default), csv, or string",
+        help="input data format: path (default), csv, json, or string",
     )
 
     parser.add_argument(
@@ -355,12 +417,12 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     1. Parse command-line arguments.
     2. Read input from stdin or a positional ``FILE`` argument according to
-       ``--input-format`` (``path``, ``csv``, or ``string``).
+       ``--input-format`` (``path``, ``csv``, ``json``, or ``string``).
     3. Optionally parse ``--session-var`` pairs into top-level variables.
     4. Optionally parse ``--mod`` triples into modifier overrides.
     5. For each input row: construct a :class:`~result_item.ResultItem`
        (via :meth:`~result_item.ResultItem.from_path` for ``path`` format,
-       or directly for ``csv`` and ``string`` formats) and collect it.
+       or directly for ``csv``, ``json``, and ``string`` formats) and collect it.
     6. Serialize to JSON and print to stdout.
 
     Args:
@@ -439,6 +501,47 @@ def main(argv: Sequence[str] | None = None) -> int:
                         variables=item_vars,
                     )
                     items.append(item)
+            case "json":
+                rows = parse_input_json(args.file)
+                item_vars = dict(args.result_var) if args.result_var is not None else {}
+
+                for row in rows:
+                    title = row.get("title")
+                    if title is None:
+                        parser.error(
+                            "json input requires a 'title' key in every object"
+                        )
+
+                    uid = row.get("uid")
+                    subtitle = row.get("subtitle")
+                    arg = row.get("arg")
+
+                    item_type: ItemType | None = None
+                    type_str = row.get("type")
+                    if type_str is not None:
+                        try:
+                            item_type = ItemType(type_str)
+                        except ValueError:
+                            valid = ", ".join(f"'{t}'" for t in ItemType)
+                            parser.error(
+                                f"invalid 'type' value {type_str!r} in json"
+                                f" — must be one of {valid}"
+                            )
+
+                    icon_path = row.get("icon")
+                    icon = Icon(icon_path) if icon_path is not None else None
+
+                    item = ResultItem(
+                        title=title,
+                        subtitle=subtitle,
+                        uid=uid,
+                        arg=arg,
+                        type=item_type,
+                        icon=icon,
+                        mods=mods,
+                        variables=item_vars,
+                    )
+                    items.append(item)
             case "string":
                 data = parse_input_lines(args.file)
                 item_vars = dict(args.result_var) if args.result_var is not None else {}
@@ -451,6 +554,8 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     except OSError as e:
         parser.error(f"can't open '{args.file}': {e.strerror}")
+    except ValueError as e:
+        parser.error(str(e))
 
     if not items:
         parser.error("no input data found")
