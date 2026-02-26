@@ -17,17 +17,33 @@ Python.
 Arguments
 ---------
 FILE
-    Path to a newline-delimited file of filesystem paths, or ``-`` to read
-    from stdin (the default when no file is given).
+    Path to an input file whose format is controlled by ``--input-format``,
+    or ``-`` to read from stdin (the default when no file is given).
+--input-format FORMAT
+    Controls how the input is parsed.  One of:
+
+    ``path`` (default)
+        One filesystem path per line.  Each path is expanded, resolved, and
+        converted to a :class:`~alfred_results.result_item.ResultItem` via
+        :meth:`~alfred_results.result_item.ResultItem.from_path`.
+    ``csv``
+        A CSV file with a header row.  The ``title`` column is required;
+        ``subtitle``, ``uid``, ``arg``, ``type``, and ``icon`` are optional.
+        Additional columns are ignored.
+    ``string``
+        One arbitrary string per line.  Each line becomes the ``title`` of a
+        plain :class:`~alfred_results.result_item.ResultItem` with no path
+        metadata.
 --mod MOD ARG SUBTITLE
     Add a modifier-key override to every result item.  ``MOD`` must be a valid
     Alfred modifier combo (e.g. ``cmd``, ``alt``, ``cmd+shift``).  May be
     repeated to add multiple modifiers.
 --result-var KEY VALUE
-    Add an Alfred result-item variable to every item.  ``VALUE`` is first
-    resolved as a :class:`~pathlib.Path` attribute name (e.g. ``name``,
-    ``suffix``, ``as_posix``); if no such attribute exists the raw string is
-    used instead.  May be repeated.
+    Add an Alfred result-item variable to every item.  For ``path`` format,
+    ``VALUE`` is first resolved as a :class:`~pathlib.Path` attribute name
+    (e.g. ``name``, ``suffix``, ``as_posix``); if no such attribute exists
+    the raw string is used instead.  For ``csv`` and ``string`` formats the
+    raw string is always used.  May be repeated.
 --session-var KEY VALUE
     Add a top-level Alfred session variable to the payload.  Session variables
     are available to all downstream workflow objects regardless of which item
@@ -40,7 +56,7 @@ Usage::
     # Pipe paths from another command
     find ~/Downloads -maxdepth 1 | alfred-results
 
-    # Pass a newline-delimited file
+    # Pass a newline-delimited file of paths (default format)
     alfred-results paths.txt
 
     # Add a modifier override and a session variable
@@ -50,12 +66,19 @@ Usage::
     # Attach per-item variables using Path attribute names
     alfred-results paths.txt --result-var ext suffix --result-var base stem
 
+    # Read a CSV file (title column required)
+    alfred-results --input-format csv data.csv
+
+    # Read plain strings, one per line
+    alfred-results --input-format string labels.txt
+
 Entry point: :func:`main`.
 """
 
 from __future__ import annotations
 
 import argparse
+import csv
 import sys
 from contextlib import contextmanager
 from pathlib import Path
@@ -67,7 +90,7 @@ if TYPE_CHECKING:
 
 from . import _get_version
 from .payload import ScriptFilterPayload
-from .result_item import Mod, ResultItem
+from .result_item import Icon, ItemType, Mod, ResultItem
 
 
 @contextmanager
@@ -94,18 +117,19 @@ def _open_input(val: str) -> Generator[TextIO, None, None]:
             yield f
 
 
-def parse_input(val: str) -> list[str]:
-    """Read newline-delimited paths from stdin or a file path.
+def parse_input_lines(val: str) -> list[str]:
+    """Read newline-delimited lines from stdin or a file path.
 
     Opens ``val`` as a file path with UTF-8 encoding, or reads from stdin
     when ``val`` is ``"-"``.  Blank lines and lines that are entirely
-    whitespace are discarded.
+    whitespace are discarded.  Used by both the ``path`` and ``string``
+    input formats.
 
     Args:
         val: A filesystem path to a text file, or ``"-"`` to read from stdin.
 
     Returns:
-        A list of non-empty, stripped path strings in the order they appear
+        A list of non-empty, stripped lines in the order they appear
         in the input.
 
     Raises:
@@ -114,6 +138,40 @@ def parse_input(val: str) -> list[str]:
     """
     with _open_input(val) as f:
         return [ln.strip() for ln in f if ln.strip()]
+
+
+def parse_input_csv(val: str, *, delimiter: str = ",") -> list[dict[str, str]]:
+    """Read a CSV file from stdin or a file path into a list of row dicts.
+
+    The first row is treated as the header and its values become the keys of
+    each row dict.  Blank rows are returned as empty dicts by the underlying
+    :class:`csv.DictReader` and are included in the output; callers are
+    responsible for any row-level validation.
+
+    Args:
+        val: A filesystem path to a CSV file, or ``"-"`` to read from stdin.
+        delimiter: The field delimiter character.  Defaults to ``","``
+            (standard CSV).  Pass ``"\\t"`` for TSV input.
+
+    Returns:
+        A list of :class:`dict` objects mapping column header names to cell
+        values, one dict per data row.
+
+    Raises:
+        OSError: If ``val`` is a file path that cannot be opened (e.g. does
+            not exist or permission denied).
+
+    Example::
+
+        # Given a file with:
+        # title,arg,subtitle
+        # Downloads,/Users/me/Downloads,My downloads folder
+        parse_input_csv("data.csv")
+        # [{"title": "Downloads", "arg": "/Users/me/Downloads", ...}]
+    """
+    with _open_input(val) as f:
+        reader = csv.DictReader(f, delimiter=delimiter)
+        return list(reader)
 
 
 def parse_session_vars(val: list[list[str]] | None) -> dict[str, str]:
@@ -236,6 +294,16 @@ def create_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
+        "-f",
+        "--input-format",
+        choices=["path", "csv", "string"],
+        default="path",
+        dest="input_format",
+        metavar="FORMAT",
+        help="input data format: path (default), csv, or string",
+    )
+
+    parser.add_argument(
         "-m",
         "--mod",
         nargs=3,
@@ -282,12 +350,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     Processing steps:
 
     1. Parse command-line arguments.
-    2. Read paths from stdin or a positional ``FILE`` argument via :func:`parse_input`.
+    2. Read input from stdin or a positional ``FILE`` argument according to
+       ``--input-format`` (``path``, ``csv``, or ``string``).
     3. Optionally parse ``--session-var`` pairs into top-level variables.
     4. Optionally parse ``--mod`` triples into modifier overrides.
-    5. For each path: build an :class:`~result_item.Icon`, resolve any
-       ``--result-var`` pairs, construct a :class:`~result_item.ResultItem`,
-       and collect it.
+    5. For each input row: construct a :class:`~result_item.ResultItem`
+       (via :meth:`~result_item.ResultItem.from_path` for ``path`` format,
+       or directly for ``csv`` and ``string`` formats) and collect it.
     6. Serialize to JSON and print to stdout.
 
     Args:
@@ -305,15 +374,6 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.file == "-" and sys.stdin.isatty():
         parser.error("no stdin provided")
 
-    paths: list[str] = []
-    try:
-        paths = parse_input(args.file)
-    except OSError as e:
-        parser.error(f"can't open '{args.file}': {e.strerror}")
-
-    if not paths:
-        parser.error("no paths found")
-
     # process session variables
     session_vars = parse_session_vars(args.session_var)
 
@@ -324,17 +384,72 @@ def main(argv: Sequence[str] | None = None) -> int:
     except ValueError as e:
         parser.error(str(e))
 
-    # build alfred result items
     items: list[ResultItem] = []
-    for i in paths:
-        p = Path(i)
+    try:
+        match args.input_format:
+            case "path":
+                data = parse_input_lines(args.file)
+                for line in data:
+                    fp = Path(line)
+                    result_variables = parse_result_vars(fp, args.result_var)
+                    item = ResultItem.from_path(
+                        fp, mods=mods, variables=result_variables
+                    )
+                    items.append(item)
+            case "csv":
+                rows = parse_input_csv(args.file)
+                item_vars = dict(args.result_var) if args.result_var is not None else {}
 
-        try:
-            result_variables = parse_result_vars(p, args.result_var)
-        except AttributeError as e:
-            parser.error(str(e))
+                for row in rows:
+                    title = row.get("title")
+                    if title is None:
+                        parser.error("csv input requires a 'title' column in every row")
 
-        items.append(ResultItem.from_path(p, mods=mods, variables=result_variables))
+                    uid = row.get("uid")
+                    subtitle = row.get("subtitle")
+                    arg = row.get("arg")
+
+                    item_type: ItemType | None = None
+                    type_str = row.get("type")
+                    if type_str is not None:
+                        try:
+                            item_type = ItemType(type_str)
+                        except ValueError:
+                            valid = ", ".join(f"'{t}'" for t in ItemType)
+                            parser.error(
+                                f"invalid 'type' value {type_str!r} in csv"
+                                f" — must be one of {valid}"
+                            )
+
+                    icon_path = row.get("icon")
+                    icon = Icon(icon_path) if icon_path is not None else None
+
+                    item = ResultItem(
+                        title=title,
+                        subtitle=subtitle,
+                        uid=uid,
+                        arg=arg,
+                        type=item_type,
+                        icon=icon,
+                        mods=mods,
+                        variables=item_vars,
+                    )
+                    items.append(item)
+            case "string":
+                data = parse_input_lines(args.file)
+                item_vars = dict(args.result_var) if args.result_var is not None else {}
+
+                for line in data:
+                    item = ResultItem(title=line, mods=mods, variables=item_vars)
+                    items.append(item)
+            case _:
+                parser.error(f"invalid --input-format: {args.input_format}")
+
+    except OSError as e:
+        parser.error(f"can't open '{args.file}': {e.strerror}")
+
+    if not items:
+        parser.error("no input data found")
 
     # build alfred script filter json payload
     payload = ScriptFilterPayload(variables=session_vars, items=items)
