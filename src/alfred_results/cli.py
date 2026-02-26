@@ -282,7 +282,11 @@ def create_parser() -> argparse.ArgumentParser:
         for ``parse_args()``.
     """
     parser = argparse.ArgumentParser(
-        description="Helper package for working with Alfred Script Filters."
+        description=(
+            "Builds Alfred Script Filter JSON from paths, CSV rows, or plain strings."
+            " Drop it into any Alfred workflow to turn shell output into a list of"
+            " results Alfred can show and act on."
+        )
     )
 
     parser.add_argument(
