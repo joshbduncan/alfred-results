@@ -141,6 +141,8 @@ alfred-results --input-format csv data.csv
 | `type` | — | `default`, `file`, or `file:skipcheck` |
 | `icon` | — | Path to an icon file |
 
+> 💡 Any extra columns you include (e.g. `url`, `id`) are ignored by the item builder but are available as lookup keys for `--result-var` and `--mod`. See [Per-result variables](#-per-result-variables---result-var) and [Modifier key overrides](#-modifier-key-overrides---mod).
+
 ---
 
 ### 🔧 `json` format
@@ -165,7 +167,7 @@ brew info --json=v2 --installed \
   | alfred-results --input-format json
 ```
 
-**Supported keys:** same as CSV: `title` (required), `subtitle`, `arg`, `uid`, `type`, `icon`. Additional keys are silently ignored.
+**Supported keys:** same as CSV: `title` (required), `subtitle`, `arg`, `uid`, `type`, `icon`. Additional keys are silently ignored by the item builder but remain available as lookup keys for `--result-var` and `--mod`.
 
 ---
 
@@ -185,23 +187,39 @@ alfred-results --input-format string bookmarks.txt
 
 Add actions for when the user holds a modifier key while highlighting a result. Each `--mod` takes three arguments: the key combo, the arg, and the subtitle. Repeat it for multiple modifiers.
 
-The `arg` is resolved per item:
+The `arg` is resolved per item using the same lookup strategy as `--result-var`:
 
-- **`path`**: tried as a [`pathlib.Path`](https://docs.python.org/3/library/pathlib.html) attribute first (e.g. `suffix`, `stem`); falls back to the raw string.
-- **`csv` / `json`**: looked up as a column or key name in the current row first; falls back to the raw string.
+- **`path`**: tried as a [`pathlib.Path`](https://docs.python.org/3/library/pathlib.html) attribute first (e.g. `name`, `stem`, `suffix`, `parent`); falls back to the raw string if the attribute doesn't exist.
+- **`csv` / `json`**: looked up as a column or key name in the current row first; falls back to the raw string if the key isn't present.
 - **`string`**: the raw string is always used.
 
 ```bash
-# path format: pass the file suffix as the mod arg
+# path format: use Path attributes as the mod arg
+mdfind -onlyin ~ "kind:pdf" \
+  | alfred-results \
+    --mod cmd  name   "Open in Preview" \
+    --mod alt  parent "Reveal folder in Finder"
+```
+
+The `cmd` mod arg resolves to the filename (e.g. `report.pdf`) and the `alt` mod arg resolves to the parent directory path, each evaluated per file.
+
+```bash
+# csv/json format: resolve mod arg from a row column
+alfred-results --input-format csv bookmarks.csv \
+    --mod cmd url "Open in browser" \
+    --mod alt id  "Copy ID"
+```
+
+Given a CSV with `title`, `url`, and `id` columns, the `cmd` mod arg becomes each row's `url` value and `alt` becomes each row's `id` value, resolved independently per row.
+
+```bash
+# raw string fallback: Alfred template variables pass through unchanged
 find ~/Projects -maxdepth 1 -type d \
   | alfred-results \
-    --mod cmd  suffix "Open in Terminal" \
-    --mod alt  stem   "Reveal in Finder"
-
-# csv/json format: resolve arg from a row column
-alfred-results --input-format csv data.csv \
-    --mod cmd url "Open in browser"
+    --mod cmd "{query}" "Search inside"
 ```
+
+`{query}` is not a valid `Path` attribute so it passes through as-is, letting Alfred substitute its value at runtime.
 
 Valid modifier keys: `cmd`, `alt`, `ctrl`, `shift`, `fn`, and any combination of up to three joined with `+` (e.g. `cmd+shift`, `alt+ctrl+fn`).
 
@@ -233,27 +251,52 @@ echo "/tmp/foo" | alfred-results \
 
 ### 📌 Per-result variables (`--result-var`)
 
-Attach item-scoped variables to every result.
+Attach item-scoped variables to every result. The value is resolved per item before being set:
 
-- **`path`**: `_path` and `_parent` are always injected automatically; `--result-var` adds to them. The value is first resolved as a [`pathlib.Path`](https://docs.python.org/3/library/pathlib.html) attribute name (e.g. `suffix`, `stem`, `parent`); if no such attribute exists the raw string is used.
-- **`csv` / `json`**: the value is first looked up as a column or key name in the current row; if not found the raw string is used.
+- **`path`**: `_path` and `_parent` are always injected automatically; `--result-var` adds to them. The value is first tried as a [`pathlib.Path`](https://docs.python.org/3/library/pathlib.html) attribute name (e.g. `suffix`, `stem`, `parent`, `name`); if the attribute doesn't exist the raw string is used.
+- **`csv` / `json`**: the value is first looked up as a column or key name in the current row; if the key isn't present the raw string is used.
 - **`string`**: the raw string is always used.
 
+**`path` format example:** extract Path attributes as variables:
+
 ```bash
-echo "/Users/me/report.pdf" | alfred-results \
-  --result-var file_ext  suffix \
-  --result-var file_stem stem \
-  --result-var file_dir  parent
+mdfind -onlyin ~ "kind:pdf" | alfred-results \
+  --result-var file_name   name \
+  --result-var file_ext    suffix \
+  --result-var file_stem   stem \
+  --result-var file_dir    parent
 ```
 
-Produces `variables` on each item:
+Produces on each item:
 
 ```json
 {
-  "file_ext": ".pdf",
+  "file_name": "report.pdf",
+  "file_ext":  ".pdf",
   "file_stem": "report",
-  "file_dir": "/Users/me"
+  "file_dir":  "/Users/me/Documents"
 }
+```
+
+**`csv` / `json` format example:** pull row values into variables:
+
+```bash
+# Given data.csv:
+# title,url,category
+# GitHub,https://github.com,dev
+# Linear,https://linear.app,project
+
+alfred-results --input-format csv data.csv \
+  --result-var link     url \
+  --result-var tag      category \
+  --result-var source   bookmarks
+```
+
+`link` and `tag` are resolved from the current row's `url` and `category` columns. `source` has no matching column so the raw string `"bookmarks"` is used. Each item gets:
+
+```json
+{"link": "https://github.com", "tag": "dev",     "source": "bookmarks"}
+{"link": "https://linear.app",  "tag": "project", "source": "bookmarks"}
 ```
 
 ---
@@ -350,7 +393,7 @@ item = ResultItem(
 )
 ```
 
-Only `title` is required, every other field is optional and omitted from the JSON if not set.
+Only `title` is required; every other field is optional and omitted from the JSON if not set.
 
 ---
 
@@ -371,7 +414,7 @@ Icon(path="com.adobe.pdf", resource_type=IconResourceType.FILETYPE)
 Icon(path="./icons/star.png")
 # → {"path": "./icons/star.png"}
 
-# No icon at all, the key is omitted from the JSON entirely
+# No icon at all; the key is omitted from the JSON entirely
 Icon()
 # → None (omitted)
 ```
@@ -476,7 +519,7 @@ ScriptFilterCache(seconds=300, loosereload=True)
 ScriptFilterCache(seconds=3600)
 ```
 
-`seconds` must be between `5` and `86400` (24 hours).  `loosereload=True` tells Alfred to show the cached results immediately while re-running the script in the background, which is great for slow data sources.
+`seconds` must be between `5` and `86400` (24 hours). `loosereload=True` tells Alfred to show the cached results immediately while re-running the script in the background, which is great for slow data sources.
 
 ---
 
