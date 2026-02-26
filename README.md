@@ -223,7 +223,11 @@ echo "/tmp/foo" | alfred-results \
 
 ### 📌 Per-result variables (`--result-var`)
 
-Attach item-scoped variables to every result. For `path` format, `_path` and `_parent` are always injected automatically; `--result-var` adds to them. The value is first resolved as a [`pathlib.Path`](https://docs.python.org/3/library/pathlib.html) attribute name; if no such attribute exists the raw string is used. For `csv`, `json`, and `string` formats the raw string is always used.
+Attach item-scoped variables to every result.
+
+- **`path`**: `_path` and `_parent` are always injected automatically; `--result-var` adds to them. The value is first resolved as a [`pathlib.Path`](https://docs.python.org/3/library/pathlib.html) attribute name (e.g. `suffix`, `stem`, `parent`); if no such attribute exists the raw string is used.
+- **`csv` / `json`**: the value is first looked up as a column or key name in the current row; if not found the raw string is used.
+- **`string`**: the raw string is always used.
 
 ```bash
 echo "/Users/me/report.pdf" | alfred-results \

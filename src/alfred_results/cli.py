@@ -47,7 +47,9 @@ FILE
     Add an Alfred result-item variable to every item.  For ``path`` format,
     ``VALUE`` is first resolved as a :class:`~pathlib.Path` attribute name
     (e.g. ``name``, ``suffix``, ``as_posix``); if no such attribute exists
-    the raw string is used instead.  For ``csv`` and ``string`` formats the
+    the raw string is used instead.  For ``csv`` and ``json`` formats,
+    ``VALUE`` is first looked up as a column/key name in the current row;
+    if not found the raw string is used instead.  For ``string`` format the
     raw string is always used.  May be repeated.
 --session-var KEY VALUE
     Add a top-level Alfred session variable to the payload.  Session variables
@@ -295,7 +297,8 @@ def parse_result_vars(p: Path, val: list[list[str]] | None) -> dict[str, str] | 
         A ``{variable_name: resolved_str_value}`` dict, or ``None`` when
         *val* is ``None``.  When a ``path_attribute`` name is not a valid
         :class:`~pathlib.Path` attribute the raw ``VALUE`` string is used
-        as-is rather than raising.
+        as-is rather than raising.  For ``csv`` and ``json`` formats see
+        :func:`parse_result_vars_from_row`.
     """
     if val is None:
         return None
@@ -306,6 +309,33 @@ def parse_result_vars(p: Path, val: list[list[str]] | None) -> dict[str, str] | 
         except AttributeError:
             d[k] = v
     return d
+
+
+def parse_result_vars_from_row(
+    row: dict[str, str], val: list[list[str]] | None
+) -> dict[str, str] | None:
+    """Build per-result variables by looking up keys in a parsed row dict.
+
+    Each element of *val* is a two-element list ``[VAR_NAME, ROW_KEY]``.
+    For each pair, *ROW_KEY* is looked up in *row*; if the key is present
+    its value is used.  If *ROW_KEY* is not present in *row*, the raw
+    *ROW_KEY* string is used as-is.  This mirrors the fallback behaviour of
+    :func:`parse_result_vars` for the ``path`` format.
+
+    Args:
+        row: The parsed row dict from a ``csv`` or ``json`` input item.
+        val: A list of ``[variable_name, row_key]`` pairs supplied via
+            ``--result-var`` on the command line, or ``None`` when the
+            option was not provided.
+
+    Returns:
+        A ``{variable_name: value}`` dict, or ``None`` when *val* is
+        ``None``.  A ``None`` return value signals callers to omit the
+        ``variables`` key from the result item entirely.
+    """
+    if val is None:
+        return None
+    return {k: row.get(v, v) for k, v in val}
 
 
 def parse_mods(val: list[list[str]] | None) -> list[Mod]:
@@ -422,6 +452,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     5. For each input row: construct a :class:`~result_item.ResultItem`
        (via :meth:`~result_item.ResultItem.from_path` for ``path`` format,
        or directly for ``csv``, ``json``, and ``string`` formats) and collect it.
+       For ``csv`` and ``json``, ``--result-var`` values are first looked up
+       as keys in the row dict before falling back to the raw string.
     6. Serialize to JSON and print to stdout.
 
     Args:
@@ -463,7 +495,6 @@ def main(argv: Sequence[str] | None = None) -> int:
                     items.append(item)
             case "csv":
                 rows = parse_input_csv(args.file)
-                item_vars = dict(args.result_var) if args.result_var is not None else {}
 
                 for row in rows:
                     title = row.get("title")
@@ -489,6 +520,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     icon_path = row.get("icon")
                     icon = Icon(icon_path) if icon_path is not None else None
 
+                    item_vars = parse_result_vars_from_row(row, args.result_var)
                     item = ResultItem(
                         title=title,
                         subtitle=subtitle,
@@ -502,7 +534,6 @@ def main(argv: Sequence[str] | None = None) -> int:
                     items.append(item)
             case "json":
                 rows = parse_input_json(args.file)
-                item_vars = dict(args.result_var) if args.result_var is not None else {}
 
                 for row in rows:
                     title = row.get("title")
@@ -530,6 +561,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     icon_path = row.get("icon")
                     icon = Icon(icon_path) if icon_path is not None else None
 
+                    item_vars = parse_result_vars_from_row(row, args.result_var)
                     item = ResultItem(
                         title=title,
                         subtitle=subtitle,
