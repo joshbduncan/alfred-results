@@ -41,8 +41,11 @@ FILE
         metadata.
 --mod MOD ARG SUBTITLE
     Add a modifier-key override to every result item.  ``MOD`` must be a valid
-    Alfred modifier combo (e.g. ``cmd``, ``alt``, ``cmd+shift``).  May be
-    repeated to add multiple modifiers.
+    Alfred modifier combo (e.g. ``cmd``, ``alt``, ``cmd+shift``).  ``ARG`` is
+    resolved per item: for ``path`` format it is tried as a
+    :class:`~pathlib.Path` attribute first; for ``csv`` and ``json`` formats
+    it is looked up as a column/key in the current row first.  In both cases
+    the raw string is used when no match is found.  May be repeated.
 --result-var KEY VALUE
     Add an Alfred result-item variable to every item.  For ``path`` format,
     ``VALUE`` is first resolved as a :class:`~pathlib.Path` attribute name
@@ -341,8 +344,10 @@ def parse_result_vars_from_row(
 def parse_mods(val: list[list[str]] | None) -> list[Mod]:
     """Convert argparse ``--mod`` triples into :class:`~result_item.Mod` instances.
 
-    Each element of *val* is a three-element list ``[MOD_KEY, ARG, SUBTITLE]``
-    produced by ``argparse`` when ``nargs=3, action="append"`` is used.
+    Used for upfront validation of modifier key combos before any rows are
+    processed.  The ``arg`` field is taken as a raw string here; for
+    per-row ``arg`` resolution against row keys or :class:`~pathlib.Path`
+    attributes use :func:`build_mods_for_row` instead.
 
     Args:
         val: A list of ``[mod_key, arg, subtitle]`` triples supplied via
@@ -361,6 +366,87 @@ def parse_mods(val: list[list[str]] | None) -> list[Mod]:
         return []
     return [
         Mod(key=key, valid=True, arg=arg, subtitle=subtitle)
+        for key, arg, subtitle in val
+    ]
+
+
+def resolve_mod_arg(
+    arg: str,
+    *,
+    row: dict[str, str] | None = None,
+    path: Path | None = None,
+) -> str:
+    """Resolve a mod ``arg`` value against a row dict or a Path object.
+
+    Applies the same lookup-then-fallback strategy used by
+    :func:`parse_result_vars` and :func:`parse_result_vars_from_row`:
+
+    * If *row* is provided: look up *arg* as a key in *row*; use the raw
+      string if the key is absent.
+    * If *path* is provided: try to resolve *arg* as a
+      :class:`~pathlib.Path` attribute via :func:`get_path_attribute`; use
+      the raw string if the attribute does not exist.
+    * If neither is provided: return *arg* as-is (used for the ``string``
+      format where no structured data is available).
+
+    Only one of *row* or *path* should be supplied per call.
+
+    Args:
+        arg: The raw ``arg`` string from a ``--mod`` triple.
+        row: A parsed row dict from a ``csv`` or ``json`` input item.
+        path: The :class:`~pathlib.Path` for the current ``path``-format item.
+
+    Returns:
+        The resolved argument string.
+    """
+    if row is not None:
+        return row.get(arg, arg)
+    if path is not None:
+        try:
+            return str(get_path_attribute(path, arg))
+        except AttributeError:
+            return arg
+    return arg
+
+
+def build_mods_for_row(
+    val: list[list[str]] | None,
+    *,
+    row: dict[str, str] | None = None,
+    path: Path | None = None,
+) -> list[Mod]:
+    """Build per-row :class:`~result_item.Mod` instances with resolved ``arg`` values.
+
+    Iterates the ``--mod`` triples and resolves each ``arg`` value via
+    :func:`resolve_mod_arg` before constructing the :class:`~result_item.Mod`.
+    This allows the ``arg`` to reference a row column/key (for ``csv`` and
+    ``json`` formats) or a :class:`~pathlib.Path` attribute (for the ``path``
+    format), falling back to the raw string in both cases.
+
+    Args:
+        val: A list of ``[mod_key, arg, subtitle]`` triples supplied via
+            ``--mod`` on the command line, or ``None`` when the option was
+            not provided.
+        row: A parsed row dict from a ``csv`` or ``json`` input item.
+        path: The :class:`~pathlib.Path` for the current ``path``-format item.
+
+    Returns:
+        A list of :class:`~result_item.Mod` objects with ``valid=True``, or
+        an empty list when *val* is ``None``.
+
+    Raises:
+        ValueError: If any *mod_key* is not a recognized Alfred modifier combo
+            (propagated from :class:`~result_item.Mod.__post_init__`).
+    """
+    if val is None:
+        return []
+    return [
+        Mod(
+            key=key,
+            valid=True,
+            arg=resolve_mod_arg(arg, row=row, path=path),
+            subtitle=subtitle,
+        )
         for key, arg, subtitle in val
     ]
 
@@ -448,12 +534,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     2. Read input from stdin or a positional ``FILE`` argument according to
        ``--input-format`` (``path``, ``csv``, ``json``, or ``string``).
     3. Optionally parse ``--session-var`` pairs into top-level variables.
-    4. Optionally parse ``--mod`` triples into modifier overrides.
+    4. Validate ``--mod`` key combos upfront via :func:`parse_mods`.
     5. For each input row: construct a :class:`~result_item.ResultItem`
        (via :meth:`~result_item.ResultItem.from_path` for ``path`` format,
        or directly for ``csv``, ``json``, and ``string`` formats) and collect it.
-       For ``csv`` and ``json``, ``--result-var`` values are first looked up
-       as keys in the row dict before falling back to the raw string.
+       For ``path``, ``csv``, and ``json``, ``--result-var`` values and
+       ``--mod`` ``ARG`` values are resolved per item against Path attributes
+       or row keys respectively, falling back to the raw string.
     6. Serialize to JSON and print to stdout.
 
     Args:
@@ -489,8 +576,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                 for line in data:
                     fp = Path(line)
                     result_variables = parse_result_vars(fp, args.result_var)
+                    item_mods = build_mods_for_row(args.mod, path=fp)
                     item = ResultItem.from_path(
-                        fp, mods=mods, variables=result_variables
+                        fp, mods=item_mods, variables=result_variables
                     )
                     items.append(item)
             case "csv":
@@ -521,6 +609,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     icon = Icon(icon_path) if icon_path is not None else None
 
                     item_vars = parse_result_vars_from_row(row, args.result_var)
+                    item_mods = build_mods_for_row(args.mod, row=row)
                     item = ResultItem(
                         title=title,
                         subtitle=subtitle,
@@ -528,7 +617,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                         arg=arg,
                         type=item_type,
                         icon=icon,
-                        mods=mods,
+                        mods=item_mods,
                         variables=item_vars,
                     )
                     items.append(item)
@@ -562,6 +651,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     icon = Icon(icon_path) if icon_path is not None else None
 
                     item_vars = parse_result_vars_from_row(row, args.result_var)
+                    item_mods = build_mods_for_row(args.mod, row=row)
                     item = ResultItem(
                         title=title,
                         subtitle=subtitle,
@@ -569,7 +659,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                         arg=arg,
                         type=item_type,
                         icon=icon,
-                        mods=mods,
+                        mods=item_mods,
                         variables=item_vars,
                     )
                     items.append(item)

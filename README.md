@@ -185,12 +185,22 @@ alfred-results --input-format string bookmarks.txt
 
 Add actions for when the user holds a modifier key while highlighting a result. Each `--mod` takes three arguments: the key combo, the arg, and the subtitle. Repeat it for multiple modifiers.
 
+The `arg` is resolved per item:
+
+- **`path`**: tried as a [`pathlib.Path`](https://docs.python.org/3/library/pathlib.html) attribute first (e.g. `suffix`, `stem`); falls back to the raw string.
+- **`csv` / `json`**: looked up as a column or key name in the current row first; falls back to the raw string.
+- **`string`**: the raw string is always used.
+
 ```bash
+# path format: pass the file suffix as the mod arg
 find ~/Projects -maxdepth 1 -type d \
   | alfred-results \
-    --mod cmd  "{query}" "Open in Terminal" \
-    --mod alt  "{query}" "Reveal in Finder" \
-    --mod shift "{query}" "Copy path to clipboard"
+    --mod cmd  suffix "Open in Terminal" \
+    --mod alt  stem   "Reveal in Finder"
+
+# csv/json format: resolve arg from a row column
+alfred-results --input-format csv data.csv \
+    --mod cmd url "Open in browser"
 ```
 
 Valid modifier keys: `cmd`, `alt`, `ctrl`, `shift`, `fn`, and any combination of up to three joined with `+` (e.g. `cmd+shift`, `alt+ctrl+fn`).
