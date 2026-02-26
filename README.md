@@ -1,6 +1,6 @@
 # alfred-results 🎩
 
-Turn paths, CSV rows, JSON objects, or plain strings into [Alfred Script Filter](https://www.alfredapp.com/help/workflows/inputs/script-filter/) JSON — without writing a single line of boilerplate.
+Turn paths, CSV rows, JSON objects, or plain strings into [Alfred Script Filter](https://www.alfredapp.com/help/workflows/inputs/script-filter/) JSON, without writing a single line of boilerplate.
 
 Use it as a **CLI tool** (pipe data in, get Alfred JSON out) or as a **Python library** (build result items programmatically and compose them however you like). No runtime dependencies. Python ≥ 3.12.
 
@@ -66,15 +66,15 @@ usage: alfred-results [-h] [-f FORMAT] [-m MOD ARG SUBTITLE]
 | Format | Input shape | Use case |
 |---|---|---|
 | `path` *(default)* | One filesystem path per line | `find`, `mdfind`, `ls` pipelines |
-| `csv` | CSV with a header row; `title` required | Spreadsheets, exported data |
-| `json` | JSON array of objects; `title` required | `jq`, `gh`, `brew info --json` |
+| `csv` | CSV with a header row (`title` required) | Spreadsheets, exported data |
+| `json` | JSON array of objects (`title` required) | `jq`, `gh`, `brew info --json` |
 | `string` | One arbitrary string per line | Labels, commands, bookmarks |
 
 ---
 
 ### 📁 `path` format (default)
 
-One path per line — piped in or from a file. Each path is expanded, resolved, and converted into a fully-populated result item automatically.
+One path per line, piped in or from a file. Each path is expanded, resolved, and converted into a fully-populated result item automatically.
 
 ```bash
 # Pipe from find
@@ -118,7 +118,7 @@ mdfind -onlyin ~ "kind:pdf" | alfred-results
 
 ### 📊 `csv` format
 
-Pass a CSV file with a header row. `title` is the only required column; everything else is optional and unknown columns are ignored.
+Pass a CSV file with a header row. `title` is the only required column. Everything else is optional and unknown columns are ignored.
 
 ```
 title,subtitle,arg,type,icon,uid
@@ -145,7 +145,7 @@ alfred-results --input-format csv data.csv
 
 ### 🔧 `json` format
 
-Pass a JSON array of objects — perfect for piping output from tools that already speak JSON.
+Pass a JSON array of objects, perfect for piping output from tools that already speak JSON.
 
 ```bash
 # From a file
@@ -165,7 +165,7 @@ brew info --json=v2 --installed \
   | alfred-results --input-format json
 ```
 
-**Supported keys:** same as CSV — `title` (required), `subtitle`, `arg`, `uid`, `type`, `icon`. Additional keys are silently ignored.
+**Supported keys:** same as CSV: `title` (required), `subtitle`, `arg`, `uid`, `type`, `icon`. Additional keys are silently ignored.
 
 ---
 
@@ -193,7 +193,7 @@ find ~/Projects -maxdepth 1 -type d \
     --mod shift "{query}" "Copy path to clipboard"
 ```
 
-Valid modifier keys: `cmd`, `alt`, `ctrl`, `shift`, `fn` — and any combination of up to three joined with `+` (e.g. `cmd+shift`, `alt+ctrl+fn`).
+Valid modifier keys: `cmd`, `alt`, `ctrl`, `shift`, `fn`, and any combination of up to three joined with `+` (e.g. `cmd+shift`, `alt+ctrl+fn`).
 
 ---
 
@@ -223,7 +223,7 @@ echo "/tmp/foo" | alfred-results \
 
 ### 📌 Per-result variables (`--result-var`)
 
-Attach item-scoped variables to every result. For `path` format, the value is first resolved as a [`pathlib.Path`](https://docs.python.org/3/library/pathlib.html) attribute name — if no such attribute exists the raw string is used. For `csv`, `json`, and `string` formats the raw string is always used.
+Attach item-scoped variables to every result. For `path` format, the value is first resolved as a [`pathlib.Path`](https://docs.python.org/3/library/pathlib.html) attribute name and if no such attribute exists the raw string is used. For `csv`, `json`, and `string` formats the raw string is always used.
 
 ```bash
 echo "/Users/me/report.pdf" | alfred-results \
@@ -336,7 +336,7 @@ item = ResultItem(
 )
 ```
 
-Only `title` is required — every other field is optional and omitted from the JSON if not set.
+Only `title` is required, every other field is optional and omitted from the JSON if not set.
 
 ---
 
@@ -357,7 +357,7 @@ Icon(path="com.adobe.pdf", resource_type=IconResourceType.FILETYPE)
 Icon(path="./icons/star.png")
 # → {"path": "./icons/star.png"}
 
-# No icon at all — the key is omitted from the JSON entirely
+# No icon at all, the key is omitted from the JSON entirely
 Icon()
 # → None (omitted)
 ```
@@ -397,7 +397,7 @@ item = ResultItem(
 }
 ```
 
-Valid modifier keys: `cmd`, `alt`, `ctrl`, `shift`, `fn` — any 1–3 key ordered combination joined with `+`.
+Valid modifier keys: `cmd`, `alt`, `ctrl`, `shift`, `fn`, any 1–3 key ordered combination joined with `+`.
 
 ---
 
@@ -455,20 +455,20 @@ data = payload.to_dict()
 ```python
 from alfred_results.payload import ScriptFilterCache
 
-# Cache for 5 minutes; show stale results immediately while reloading
+# Cache for 5 minutes, show stale results immediately while reloading
 ScriptFilterCache(seconds=300, loosereload=True)
 
-# Cache for 1 hour; wait for fresh results before showing anything
+# Cache for 1 hour, wait for fresh results before showing anything
 ScriptFilterCache(seconds=3600)
 ```
 
-`seconds` must be between `5` and `86400` (24 hours).  `loosereload=True` tells Alfred to show the cached results immediately while re-running the script in the background — great for slow data sources.
+`seconds` must be between `5` and `86400` (24 hours).  `loosereload=True` tells Alfred to show the cached results immediately while re-running the script in the background, which is great for slow data sources.
 
 ---
 
 ### Stable UIDs with `path_to_uuid` 🔑
 
-Alfred uses the `uid` field to learn from your selection history and reorder results over time. `path_to_uuid` derives a deterministic UUID v5 from a resolved path so the same path always produces the same `uid` — no database required.
+Alfred uses the `uid` field to learn from your selection history and reorder results over time. `path_to_uuid` derives a deterministic UUID v5 from a resolved path so the same path always produces the same `uid`, no database required.
 
 ```python
 from pathlib import Path
@@ -478,7 +478,7 @@ uid = path_to_uuid(str(Path("~/Downloads").expanduser().resolve()))
 # → "a696dbaa-739b-5781-8e08-7e38648f678a"  (stable across runs)
 ```
 
-`ResultItem.from_path()` calls this automatically — you only need it when building items manually.
+`ResultItem.from_path()` calls this automatically. You only need it when building items manually.
 
 ---
 
@@ -509,7 +509,7 @@ print("cmd+cmd" in combos)   # False
 |---|---|---|---|
 | `title` | `str` | ✅ | Primary text shown in the result row |
 | `subtitle` | `str` | — | Secondary text below the title |
-| `uid` | `str` | — | Stable identifier; Alfred learns ordering from this |
+| `uid` | `str` | — | Stable identifier (Alfred learns ordering from this) |
 | `arg` | `str \| Sequence[str]` | — | Argument passed to the next workflow action |
 | `valid` | `bool` | — | `False` makes the item non-actionable |
 | `autocomplete` | `str` | — | Text inserted into Alfred's search field on Tab |
@@ -536,7 +536,7 @@ print("cmd+cmd" in combos)   # False
 
 | Value | Alfred JSON | Description |
 |---|---|---|
-| `ItemType.DEFAULT` | `"default"` | Standard result; no filesystem check |
+| `ItemType.DEFAULT` | `"default"` | Standard result (no filesystem check) |
 | `ItemType.FILE` | `"file"` | Alfred checks the path exists before showing |
 | `ItemType.FILE_SKIPCHECK` | `"file:skipcheck"` | Treated as file but existence check skipped |
 
@@ -551,4 +551,4 @@ print("cmd+cmd" in combos)   # False
 
 ## License
 
-MIT — see [LICENSE](LICENSE) for details.
+MIT. See [LICENSE](LICENSE) for details.
