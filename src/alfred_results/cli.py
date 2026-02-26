@@ -90,6 +90,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import sys
 from contextlib import contextmanager
 from pathlib import Path
@@ -212,8 +213,6 @@ def parse_input_json(val: str) -> list[dict[str, str]]:
         parse_input_json("data.json")
         # [{"title": "Downloads", "arg": "/Users/me/Downloads", "subtitle": "Home"}]
     """
-    import json
-
     with _open_input(val) as f:
         try:
             data = json.load(f)
