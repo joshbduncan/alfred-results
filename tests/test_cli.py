@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from alfred_results.cli import (
+    build_mods_for_row,
     create_parser,
     get_path_attribute,
     main,
@@ -18,6 +19,7 @@ from alfred_results.cli import (
     parse_result_vars,
     parse_result_vars_from_row,
     parse_session_vars,
+    resolve_mod_arg,
 )
 
 if TYPE_CHECKING:
@@ -162,6 +164,94 @@ class TestParseMods:
     def test_invalid_mod_key_raises(self) -> None:
         with pytest.raises(ValueError, match="Invalid modifier key combo"):
             parse_mods([["super", "/tmp/foo", "subtitle"]])
+
+
+# ---------------------------------------------------------------------------
+# resolve_mod_arg
+# ---------------------------------------------------------------------------
+
+
+class TestResolveModArg:
+    def test_no_row_no_path_returns_raw(self) -> None:
+        assert resolve_mod_arg("rawval") == "rawval"
+
+    def test_row_key_found(self) -> None:
+        assert (
+            resolve_mod_arg("url", row={"url": "https://example.com"})
+            == "https://example.com"
+        )
+
+    def test_row_key_missing_returns_raw(self) -> None:
+        assert resolve_mod_arg("missing", row={"title": "foo"}) == "missing"
+
+    def test_path_attribute_resolved(self, tmp_path: Path) -> None:
+        p = tmp_path / "report.pdf"
+        assert resolve_mod_arg("suffix", path=p) == ".pdf"
+
+    def test_path_attribute_missing_returns_raw(self, tmp_path: Path) -> None:
+        p = tmp_path / "report.pdf"
+        assert resolve_mod_arg("notanattr", path=p) == "notanattr"
+
+    def test_path_callable_attribute(self, tmp_path: Path) -> None:
+        p = tmp_path / "report.pdf"
+        assert resolve_mod_arg("as_posix", path=p) == p.as_posix()
+
+
+# ---------------------------------------------------------------------------
+# build_mods_for_row
+# ---------------------------------------------------------------------------
+
+
+class TestBuildModsForRow:
+    def test_none_returns_empty_list(self) -> None:
+        assert build_mods_for_row(None) == []
+
+    def test_raw_arg_when_no_context(self) -> None:
+        mods = build_mods_for_row([["cmd", "/tmp/foo", "Open"]])
+        assert mods[0].arg == "/tmp/foo"
+
+    def test_row_key_resolved(self) -> None:
+        row = {"title": "GitHub", "url": "https://github.com"}
+        mods = build_mods_for_row([["cmd", "url", "Open"]], row=row)
+        assert mods[0].arg == "https://github.com"
+
+    def test_row_key_missing_falls_back(self) -> None:
+        row = {"title": "foo"}
+        mods = build_mods_for_row([["cmd", "missing", "Open"]], row=row)
+        assert mods[0].arg == "missing"
+
+    def test_path_attribute_resolved(self, tmp_path: Path) -> None:
+        p = tmp_path / "report.pdf"
+        mods = build_mods_for_row([["cmd", "suffix", "Open"]], path=p)
+        assert mods[0].arg == ".pdf"
+
+    def test_path_attribute_missing_falls_back(self, tmp_path: Path) -> None:
+        p = tmp_path / "report.pdf"
+        mods = build_mods_for_row([["cmd", "notanattr", "Open"]], path=p)
+        assert mods[0].arg == "notanattr"
+
+    def test_valid_is_true(self) -> None:
+        mods = build_mods_for_row([["alt", "/tmp/foo", "subtitle"]])
+        assert mods[0].valid is True
+
+    def test_subtitle_preserved(self) -> None:
+        mods = build_mods_for_row([["cmd", "/tmp/foo", "My subtitle"]])
+        assert mods[0].subtitle == "My subtitle"
+
+    def test_multiple_mods(self) -> None:
+        mods = build_mods_for_row(
+            [
+                ["cmd", "/tmp/a", "A"],
+                ["alt", "/tmp/b", "B"],
+            ]
+        )
+        assert len(mods) == 2
+        assert mods[0].key == "cmd"
+        assert mods[1].key == "alt"
+
+    def test_invalid_key_raises(self) -> None:
+        with pytest.raises(ValueError, match="Invalid modifier key combo"):
+            build_mods_for_row([["superkey", "/tmp/foo", "sub"]])
 
 
 # ---------------------------------------------------------------------------
@@ -311,6 +401,26 @@ class TestMainPathFormat:
         payload = run([str(f), "--mod", "cmd", "/tmp/out", "Open in Terminal"], capsys)
         assert "cmd" in payload["items"][0]["mods"]
 
+    def test_mod_arg_resolved_as_path_attribute(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        p = tmp_path / "report.pdf"
+        p.touch()
+        f = tmp_path / "input.txt"
+        f.write_text(str(p))
+        payload = run([str(f), "--mod", "cmd", "suffix", "Open"], capsys)
+        assert payload["items"][0]["mods"]["cmd"]["arg"] == ".pdf"
+
+    def test_mod_arg_raw_fallback_for_path(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        p = tmp_path / "report.pdf"
+        p.touch()
+        f = tmp_path / "input.txt"
+        f.write_text(str(p))
+        payload = run([str(f), "--mod", "cmd", "{query}", "Open"], capsys)
+        assert payload["items"][0]["mods"]["cmd"]["arg"] == "{query}"
+
 
 # ---------------------------------------------------------------------------
 # main() — csv format
@@ -377,6 +487,31 @@ class TestMainCsvFormat:
         payload = run(["-f", "csv", str(f), "--result-var", "link", "url"], capsys)
         assert payload["items"][0]["variables"]["link"] == "https://github.com"
         assert payload["items"][1]["variables"]["link"] == "https://pypi.org"
+
+    def test_mod_arg_resolved_from_csv_column(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        f = tmp_path / "data.csv"
+        f.write_text("title,url\nGitHub,https://github.com\n")
+        payload = run(["-f", "csv", str(f), "--mod", "cmd", "url", "Open"], capsys)
+        assert payload["items"][0]["mods"]["cmd"]["arg"] == "https://github.com"
+
+    def test_mod_arg_raw_fallback_for_csv(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        f = tmp_path / "data.csv"
+        f.write_text("title\nfoo\n")
+        payload = run(["-f", "csv", str(f), "--mod", "cmd", "rawval", "Open"], capsys)
+        assert payload["items"][0]["mods"]["cmd"]["arg"] == "rawval"
+
+    def test_mod_arg_per_row_for_csv(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        f = tmp_path / "data.csv"
+        f.write_text("title,url\nGitHub,https://github.com\nPyPI,https://pypi.org\n")
+        payload = run(["-f", "csv", str(f), "--mod", "cmd", "url", "Open"], capsys)
+        assert payload["items"][0]["mods"]["cmd"]["arg"] == "https://github.com"
+        assert payload["items"][1]["mods"]["cmd"]["arg"] == "https://pypi.org"
 
 
 # ---------------------------------------------------------------------------
@@ -449,6 +584,34 @@ class TestMainJsonFormat:
         payload = run(["-f", "json", str(f), "--result-var", "link", "url"], capsys)
         assert payload["items"][0]["variables"]["link"] == "https://github.com"
         assert payload["items"][1]["variables"]["link"] == "https://pypi.org"
+
+    def test_mod_arg_resolved_from_json_key(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        f = tmp_path / "data.json"
+        f.write_text('[{"title": "GitHub", "url": "https://github.com"}]')
+        payload = run(["-f", "json", str(f), "--mod", "cmd", "url", "Open"], capsys)
+        assert payload["items"][0]["mods"]["cmd"]["arg"] == "https://github.com"
+
+    def test_mod_arg_raw_fallback_for_json(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        f = tmp_path / "data.json"
+        f.write_text('[{"title": "foo"}]')
+        payload = run(["-f", "json", str(f), "--mod", "cmd", "rawval", "Open"], capsys)
+        assert payload["items"][0]["mods"]["cmd"]["arg"] == "rawval"
+
+    def test_mod_arg_per_row_for_json(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        f = tmp_path / "data.json"
+        f.write_text(
+            '[{"title": "GitHub", "url": "https://github.com"},'
+            ' {"title": "PyPI", "url": "https://pypi.org"}]'
+        )
+        payload = run(["-f", "json", str(f), "--mod", "cmd", "url", "Open"], capsys)
+        assert payload["items"][0]["mods"]["cmd"]["arg"] == "https://github.com"
+        assert payload["items"][1]["mods"]["cmd"]["arg"] == "https://pypi.org"
 
 
 # ---------------------------------------------------------------------------
