@@ -59,8 +59,7 @@ The package is PEP 561 compliant (`py.typed` marker present).
 
 ## Tests
 
-**No test suite currently exists.** When tests are added, `pytest` is the expected
-framework. Standard commands once tests exist:
+[`pytest`](https://docs.pytest.org/) with [`pytest-cov`](https://pytest-cov.readthedocs.io/).
 
 ```bash
 uv run pytest                                        # Run all tests
@@ -68,6 +67,9 @@ uv run pytest tests/test_foo.py                      # Run a single file
 uv run pytest tests/test_foo.py::test_my_function    # Run a single test
 uv run pytest -v                                     # Verbose output
 ```
+
+Tests live in `tests/`. Shared fixtures are in `tests/conftest.py`. Use
+`tmp_path` (a `pathlib.Path`) for any tests that need real filesystem paths.
 
 ---
 
