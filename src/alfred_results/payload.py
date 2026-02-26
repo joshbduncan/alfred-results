@@ -37,7 +37,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from alfred_results.result_item import ResultItem
+    from alfred_results.result_item import Icon, ResultItem
 
 _CACHE_SECONDS_MIN: int = 5
 _CACHE_SECONDS_MAX: int = 86400
@@ -158,6 +158,57 @@ class ScriptFilterPayload:
                 f"ScriptFilterPayload.rerun must be between {_RERUN_MIN} and"
                 f" {_RERUN_MAX}, got {self.rerun!r}."
             )
+
+    @classmethod
+    def error(
+        cls,
+        title: str,
+        subtitle: str = "",
+        *,
+        icon: Icon | None = None,
+    ) -> ScriptFilterPayload:
+        """Build a single-item error payload.
+
+        Convenience factory that wraps ``title`` and an optional ``subtitle``
+        in a non-actionable :class:`~alfred_results.result_item.ResultItem`
+        (``valid=False``) and returns a :class:`ScriptFilterPayload` containing
+        only that item.  Intended for surfaces where the script needs to report
+        a problem to the user through Alfred's result list.
+
+        Args:
+            title: The primary error message shown in the Alfred result row.
+            subtitle: Optional secondary text shown below the title.  An empty
+                string (the default) is treated as unset and omitted from the
+                serialized JSON.
+            icon: Optional icon to display next to the error row.  When
+                ``None`` (the default) no icon key is emitted.
+
+        Returns:
+            A :class:`ScriptFilterPayload` containing a single non-actionable
+            :class:`~alfred_results.result_item.ResultItem`.
+
+        Example::
+
+            # Minimal error
+            payload = ScriptFilterPayload.error("No results found")
+            print(payload.to_json())
+
+            # With subtitle and custom icon
+            payload = ScriptFilterPayload.error(
+                "Connection failed",
+                "Check your network and try again",
+                icon=Icon(path="./icons/error.png"),
+            )
+        """
+        from .result_item import ResultItem
+
+        item = ResultItem(
+            title=title,
+            subtitle=subtitle if subtitle else None,
+            valid=False,
+            icon=icon,
+        )
+        return cls(items=[item])
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to Alfred's Script Filter top-level JSON shape as a dict.

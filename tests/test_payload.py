@@ -7,7 +7,7 @@ import json
 import pytest
 
 from alfred_results.payload import ScriptFilterCache, ScriptFilterPayload
-from alfred_results.result_item import ResultItem
+from alfred_results.result_item import Icon, ResultItem
 
 
 class TestScriptFilterCache:
@@ -102,3 +102,61 @@ class TestScriptFilterPayload:
         payload = ScriptFilterPayload(items=[ResultItem(title="foo")])
         compact = payload.to_json(separators=(",", ":"))
         assert " " not in compact
+
+
+class TestScriptFilterPayloadError:
+    def test_returns_script_filter_payload(self) -> None:
+        assert isinstance(ScriptFilterPayload.error("Oops"), ScriptFilterPayload)
+
+    def test_contains_single_item(self) -> None:
+        payload = ScriptFilterPayload.error("Oops")
+        assert payload.items is not None
+        assert len(payload.items) == 1
+
+    def test_title_set(self) -> None:
+        payload = ScriptFilterPayload.error("Something went wrong")
+        assert payload.items is not None
+        assert payload.items[0].title == "Something went wrong"
+
+    def test_valid_is_false(self) -> None:
+        payload = ScriptFilterPayload.error("Oops")
+        assert payload.items is not None
+        assert payload.items[0].valid is False
+
+    def test_valid_false_serialized(self) -> None:
+        result = ScriptFilterPayload.error("Oops").to_dict()
+        assert result["items"][0]["valid"] is False
+
+    def test_empty_subtitle_omitted_from_json(self) -> None:
+        result = ScriptFilterPayload.error("Oops").to_dict()
+        assert "subtitle" not in result["items"][0]
+
+    def test_subtitle_included_when_provided(self) -> None:
+        result = ScriptFilterPayload.error("Oops", "Try again").to_dict()
+        assert result["items"][0]["subtitle"] == "Try again"
+
+    def test_icon_none_by_default(self) -> None:
+        payload = ScriptFilterPayload.error("Oops")
+        assert payload.items is not None
+        assert payload.items[0].icon is None
+
+    def test_icon_omitted_from_json_when_none(self) -> None:
+        result = ScriptFilterPayload.error("Oops").to_dict()
+        assert "icon" not in result["items"][0]
+
+    def test_icon_included_when_provided(self) -> None:
+        icon = Icon(path="./icons/error.png")
+        result = ScriptFilterPayload.error("Oops", icon=icon).to_dict()
+        assert result["items"][0]["icon"] == {"path": "./icons/error.png"}
+
+    def test_icon_is_keyword_only(self) -> None:
+        # Passing icon positionally should raise TypeError
+        with pytest.raises(TypeError):
+            ScriptFilterPayload.error("Oops", "", Icon(path="./error.png"))  # type: ignore[call-arg]
+
+    def test_to_json_produces_valid_json(self) -> None:
+        parsed = json.loads(ScriptFilterPayload.error("Oops", "Details").to_json())
+        item = parsed["items"][0]
+        assert item["title"] == "Oops"
+        assert item["subtitle"] == "Details"
+        assert item["valid"] is False
