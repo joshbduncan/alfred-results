@@ -1,7 +1,8 @@
 # AGENTS.md: alfred-results
 
-A Python helper library that converts filesystem paths into Alfred Script Filter
-JSON result items. No runtime dependencies; targets Python ≥ 3.12.
+A Python helper library that converts filesystem paths, CSV rows, JSON objects,
+and plain strings into Alfred Script Filter JSON result items. No runtime
+dependencies; targets Python ≥ 3.12.
 
 ---
 
@@ -161,8 +162,8 @@ uv run alfred-results --help
   explicit attribute declaration).
 - Validate in `__post_init__`; raise `ValueError` with a descriptive message.
 - Default optional fields to `None` rather than a sentinel.
-- Use `@classmethod` factory methods (e.g. `from_path`) to encapsulate common
-  construction patterns and spare callers from boilerplate.
+- Use `@classmethod` factory methods (e.g. `from_path`, `error`) to encapsulate
+  common construction patterns and spare callers from boilerplate.
 
   ```python
   @dataclass(slots=True)
@@ -205,6 +206,12 @@ is the only type that is ever the final output and implements both methods.
   calls `to_dict()` and passes the result to `json.dumps()`. Any `**kwargs`
   are forwarded to `json.dumps()` (e.g. `indent=2`, `sort_keys=True`).
   This is the intended user-facing method for producing Alfred output.
+- Factory classmethods on `ScriptFilterPayload` (e.g. `error`) build a
+  complete payload from high-level arguments. They defer importing
+  `ResultItem` inside the method body to avoid circular imports, follow the
+  same keyword-only argument convention for optional objects, and convert
+  empty strings to `None` before passing them to `ResultItem` so that
+  omittable fields are not serialized unnecessarily.
 - Gate every optional field with `if field is not None:` before adding it to the
   dict; omit unset keys from output entirely.
 - Return `None` from `to_dict()` when the whole object should be omitted from
@@ -245,7 +252,7 @@ src/
     ├── __init__.py          # Package init; lazy __version__ + _get_version()
     ├── __main__.py          # python -m alfred_results entry point
     ├── cli.py               # argparse CLI entry point
-    ├── payload.py           # ScriptFilterPayload, ScriptFilterCache
+    ├── payload.py           # ScriptFilterPayload, ScriptFilterCache; error() factory
     ├── py.typed             # PEP 561 marker
     ├── utils.py             # Shared utilities (path_to_uuid, _PATH_UUID_NAMESPACE)
     └── result_item/
