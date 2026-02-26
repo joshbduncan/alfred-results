@@ -1,4 +1,4 @@
-# AGENTS.md — alfred-results
+# AGENTS.md: alfred-results
 
 A Python helper library that converts filesystem paths into Alfred Script Filter
 JSON result items. No runtime dependencies; targets Python ≥ 3.12.
@@ -93,14 +93,14 @@ uv run alfred-results --help
 
 ### Enabled Lint Rules
 
-- `E` — pycodestyle errors
-- `F` — Pyflakes
-- `UP` — pyupgrade (enforce modern syntax)
-- `B` — flake8-bugbear
-- `SIM` — flake8-simplify
-- `I` — isort (import ordering)
-- `C4` — flake8-comprehensions
-- `TCH` — flake8-type-checking (enforce `TYPE_CHECKING` guards)
+- `E`: pycodestyle errors
+- `F`: Pyflakes
+- `UP`: pyupgrade (enforce modern syntax)
+- `B`: flake8-bugbear
+- `SIM`: flake8-simplify
+- `I`: isort (import ordering)
+- `C4`: flake8-comprehensions
+- `TCH`: flake8-type-checking (enforce `TYPE_CHECKING` guards)
 
 ---
 
@@ -138,7 +138,7 @@ uv run alfred-results --help
 - Import order enforced by ruff/isort: stdlib → third-party → local, each group
   separated by a blank line.
 - Defer imports inside methods (e.g. classmethods) when needed to avoid circular
-  imports — this is preferable to restructuring the module graph.
+  imports; this is preferable to restructuring the module graph.
 
 ---
 
@@ -196,15 +196,15 @@ Fragment models (`Icon`, `ScriptFilterCache`, `Mod`, `ResultItem`) each produce
 a slice of the Alfred JSON tree and implement `to_dict()`. `ScriptFilterPayload`
 is the only type that is ever the final output and implements both methods.
 
-- `to_dict() -> dict[str, Any]` — implemented by every model; returns a
+- `to_dict() -> dict[str, Any]`: implemented by every model; returns a
   JSON-serializable dict fragment for composition into the parent payload.
   Never use `dataclasses.asdict()` (it recurses too eagerly and loses control).
-- `to_json(**kwargs) -> str` — implemented by `ScriptFilterPayload` only;
+- `to_json(**kwargs) -> str`: implemented by `ScriptFilterPayload` only;
   calls `to_dict()` and passes the result to `json.dumps()`. Any `**kwargs`
   are forwarded to `json.dumps()` (e.g. `indent=2`, `sort_keys=True`).
   This is the intended user-facing method for producing Alfred output.
 - Gate every optional field with `if field is not None:` before adding it to the
-  dict — omit unset keys from output entirely.
+  dict; omit unset keys from output entirely.
 - Return `None` from `to_dict()` when the whole object should be omitted from
   the parent payload (only `Icon.to_dict()` does this, when no path is set).
 
