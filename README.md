@@ -505,6 +505,53 @@ data = payload.to_dict()
 
 ---
 
+### Error payloads 🚨
+
+`ScriptFilterPayload.error()` builds a single-item payload containing a non-actionable result (`valid=False`). Use it to surface problems to the user through Alfred's result list without leaving the workflow.
+
+```python
+from alfred_results.payload import ScriptFilterPayload
+
+# Title only
+payload = ScriptFilterPayload.error("No results found")
+print(payload.to_json())
+```
+
+```json
+{
+  "variables": {"script": "alfred-results", "version": "0.1.0"},
+  "items": [
+    {"title": "No results found", "valid": false}
+  ]
+}
+```
+
+Add an optional subtitle for more context:
+
+```python
+payload = ScriptFilterPayload.error(
+    "Connection failed",
+    "Check your network and try again",
+)
+```
+
+Pass a custom icon with the keyword-only `icon` argument:
+
+```python
+from alfred_results.payload import ScriptFilterPayload
+from alfred_results.result_item import Icon
+
+payload = ScriptFilterPayload.error(
+    "API error",
+    "Received HTTP 500",
+    icon=Icon(path="./icons/error.png"),
+)
+```
+
+> 💡 An empty `subtitle` (the default) is omitted from the JSON entirely. Only pass it when you have something useful to say.
+
+---
+
 ### Caching ⚡
 
 `ScriptFilterCache` controls how Alfred caches results between script invocations:
@@ -588,6 +635,12 @@ print("cmd+cmd" in combos)   # False
 | `rerun` | `float` | — | Re-run interval in seconds (0.1–5.0) |
 | `skipknowledge` | `bool` | — | Skip Alfred's learned ordering for this response |
 | `cache` | `ScriptFilterCache` | — | Caching configuration |
+
+**Factory classmethods:**
+
+| Method | Signature | Description |
+|---|---|---|
+| `error` | `(title, subtitle="", *, icon=None)` | Single non-actionable item payload for surfacing errors |
 
 ### `ItemType` values
 
