@@ -10,49 +10,49 @@ and writes the complete Script Filter JSON payload to stdout via
 
 Alfred Script Filters are workflow nodes that run a script and read its stdout
 as a JSON payload describing a list of result items to display in Alfred's UI.
-This CLI acts as a bridge between shell pipelines (e.g. ``find``, ``mdfind``,
-``ls``) and that JSON format, so Alfred workflows can be built without writing
+This CLI acts as a bridge between shell pipelines (e.g. `find`, `mdfind`,
+`ls`) and that JSON format, so Alfred workflows can be built without writing
 Python.
 
 Arguments
 ---------
 FILE
-    Path to an input file whose format is controlled by ``--input-format``,
-    or ``-`` to read from stdin (the default when no file is given).
+    Path to an input file whose format is controlled by `--input-format`,
+    or `-` to read from stdin (the default when no file is given).
 --input-format FORMAT
     Controls how the input is parsed.  One of:
 
-    ``path`` (default)
+    `path` (default)
         One filesystem path per line.  Each path is expanded, resolved, and
         converted to a :class:`~alfred_results.result_item.ResultItem` via
         :meth:`~alfred_results.result_item.ResultItem.from_path`.
-    ``csv``
-        A CSV file with a header row.  The ``title`` column is required;
-        ``subtitle``, ``uid``, ``arg``, ``type``, and ``icon`` are optional.
+    `csv`
+        A CSV file with a header row.  The `title` column is required;
+        `subtitle`, `uid`, `arg`, `type`, and `icon` are optional.
         Additional columns are ignored.
-    ``json``
-        A JSON array of objects.  Each object must have a ``"title"`` key;
-        ``"subtitle"``, ``"uid"``, ``"arg"``, ``"type"``, and ``"icon"`` are
+    `json`
+        A JSON array of objects.  Each object must have a `"title"` key;
+        `"subtitle"`, `"uid"`, `"arg"`, `"type"`, and `"icon"` are
         optional.  Additional keys are ignored.  Useful for piping output
-        from tools like ``jq``, ``gh``, or ``brew info --json``.
-    ``string``
-        One arbitrary string per line.  Each line becomes the ``title`` of a
+        from tools like `jq`, `gh`, or `brew info --json`.
+    `string`
+        One arbitrary string per line.  Each line becomes the `title` of a
         plain :class:`~alfred_results.result_item.ResultItem` with no path
         metadata.
 --mod MOD ARG SUBTITLE
-    Add a modifier-key override to every result item.  ``MOD`` must be a valid
-    Alfred modifier combo (e.g. ``cmd``, ``alt``, ``cmd+shift``).  ``ARG`` is
-    resolved per item: for ``path`` format it is tried as a
-    :class:`~pathlib.Path` attribute first; for ``csv`` and ``json`` formats
+    Add a modifier-key override to every result item.  `MOD` must be a valid
+    Alfred modifier combo (e.g. `cmd`, `alt`, `cmd+shift`).  `ARG` is
+    resolved per item: for `path` format it is tried as a
+    :class:`~pathlib.Path` attribute first; for `csv` and `json` formats
     it is looked up as a column/key in the current row first.  In both cases
     the raw string is used when no match is found.  May be repeated.
 --result-var KEY VALUE
-    Add an Alfred result-item variable to every item.  For ``path`` format,
-    ``VALUE`` is first resolved as a :class:`~pathlib.Path` attribute name
-    (e.g. ``name``, ``suffix``, ``as_posix``); if no such attribute exists
-    the raw string is used instead.  For ``csv`` and ``json`` formats,
-    ``VALUE`` is first looked up as a column/key name in the current row;
-    if not found the raw string is used instead.  For ``string`` format the
+    Add an Alfred result-item variable to every item.  For `path` format,
+    `VALUE` is first resolved as a :class:`~pathlib.Path` attribute name
+    (e.g. `name`, `suffix`, `as_posix`); if no such attribute exists
+    the raw string is used instead.  For `csv` and `json` formats,
+    `VALUE` is first looked up as a column/key name in the current row;
+    if not found the raw string is used instead.  For `string` format the
     raw string is always used.  May be repeated.
 --session-var KEY VALUE
     Add a top-level Alfred session variable to the payload.  Session variables
@@ -114,15 +114,15 @@ from .result_item import Icon, ItemType, Mod, ResultItem
 def _open_input(val: str) -> Generator[TextIO, None, None]:
     """Return an open text-file context manager for *val*.
 
-    Yields ``sys.stdin`` directly when *val* is ``"-"``; otherwise opens the
+    Yields `sys.stdin` directly when *val* is `"-"`; otherwise opens the
     file at *val* with UTF-8 encoding.  The file is closed automatically on
     exit; stdin is left open.
 
     Args:
-        val: A filesystem path, or ``"-"`` for stdin.
+        val: A filesystem path, or `"-"` for stdin.
 
     Yields:
-        A readable text-mode file object (``sys.stdin`` or an opened file).
+        A readable text-mode file object (`sys.stdin` or an opened file).
 
     Raises:
         OSError: If *val* is a path that cannot be opened.
@@ -137,20 +137,20 @@ def _open_input(val: str) -> Generator[TextIO, None, None]:
 def parse_input_lines(val: str) -> list[str]:
     """Read newline-delimited lines from stdin or a file path.
 
-    Opens ``val`` as a file path with UTF-8 encoding, or reads from stdin
-    when ``val`` is ``"-"``.  Blank lines and lines that are entirely
-    whitespace are discarded.  Used by both the ``path`` and ``string``
+    Opens `val` as a file path with UTF-8 encoding, or reads from stdin
+    when `val` is `"-"`.  Blank lines and lines that are entirely
+    whitespace are discarded.  Used by both the `path` and `string`
     input formats.
 
     Args:
-        val: A filesystem path to a text file, or ``"-"`` to read from stdin.
+        val: A filesystem path to a text file, or `"-"` to read from stdin.
 
     Returns:
         A list of non-empty, stripped lines in the order they appear
         in the input.
 
     Raises:
-        OSError: If ``val`` is a file path that cannot be opened (e.g. does
+        OSError: If `val` is a file path that cannot be opened (e.g. does
             not exist or permission denied).
     """
     with _open_input(val) as f:
@@ -166,16 +166,16 @@ def parse_input_csv(val: str, *, delimiter: str = ",") -> list[dict[str, str]]:
     responsible for any row-level validation.
 
     Args:
-        val: A filesystem path to a CSV file, or ``"-"`` to read from stdin.
-        delimiter: The field delimiter character.  Defaults to ``","``
-            (standard CSV).  Pass ``"\\t"`` for TSV input.
+        val: A filesystem path to a CSV file, or `"-"` to read from stdin.
+        delimiter: The field delimiter character.  Defaults to `","`
+            (standard CSV).  Pass `"\\t"` for TSV input.
 
     Returns:
         A list of :class:`dict` objects mapping column header names to cell
         values, one dict per data row.
 
     Raises:
-        OSError: If ``val`` is a file path that cannot be opened (e.g. does
+        OSError: If `val` is a file path that cannot be opened (e.g. does
             not exist or permission denied).
 
     Example::
@@ -196,17 +196,17 @@ def parse_input_json(val: str) -> list[dict[str, str]]:
 
     The input must be a JSON array where every element is an object (dict).
     Each object is returned as-is; callers are responsible for field-level
-    validation.  The ``title`` key is required by the ``json`` format handler
+    validation.  The `title` key is required by the `json` format handler
     in :func:`main` and an error is raised there if it is absent.
 
     Args:
-        val: A filesystem path to a JSON file, or ``"-"`` to read from stdin.
+        val: A filesystem path to a JSON file, or `"-"` to read from stdin.
 
     Returns:
         A list of :class:`dict` objects, one per element in the JSON array.
 
     Raises:
-        OSError: If ``val`` is a file path that cannot be opened (e.g. does
+        OSError: If `val` is a file path that cannot be opened (e.g. does
             not exist or permission denied).
         ValueError: If the input is not valid JSON, or the top-level value is
             not an array, or any element is not a JSON object.
@@ -241,17 +241,17 @@ def parse_input_json(val: str) -> list[dict[str, str]]:
 
 
 def parse_session_vars(val: list[list[str]] | None) -> dict[str, str]:
-    """Convert argparse ``--session-var`` pairs into a flat dict.
+    """Convert argparse `--session-var` pairs into a flat dict.
 
-    Each element of *val* is a two-element list ``[KEY, VALUE]`` produced by
-    ``argparse`` when ``nargs=2, action="append"`` is used.
+    Each element of *val* is a two-element list `[KEY, VALUE]` produced by
+    `argparse` when `nargs=2, action="append"` is used.
 
     Args:
-        val: A list of ``[key, value]`` pairs, or ``None`` when the option
+        val: A list of `[key, value]` pairs, or `None` when the option
             was not provided.
 
     Returns:
-        A ``{key: value}`` dict, or an empty dict when *val* is ``None``.
+        A `{key: value}` dict, or an empty dict when *val* is `None`.
     """
     if val is None:
         return {}
@@ -268,8 +268,8 @@ def get_path_attribute(p: Path, key: str) -> Any:
 
     Args:
         p: The :class:`~pathlib.Path` instance to inspect.
-        key: The attribute name to look up on *p* (e.g. ``"name"``,
-             ``"as_posix"``, ``"suffix"``).
+        key: The attribute name to look up on *p* (e.g. `"name"`,
+             `"as_posix"`, `"suffix"`).
 
     Returns:
         The attribute value, or the return value of the attribute if it is
@@ -286,21 +286,21 @@ def get_path_attribute(p: Path, key: str) -> Any:
 def parse_result_vars(p: Path, val: list[list[str]] | None) -> dict[str, str] | None:
     """Build per-result variables by resolving Path attributes.
 
-    Each element of *val* is a two-element list ``[VAR_NAME, PATH_ATTR]``
-    where ``PATH_ATTR`` names a :class:`~pathlib.Path` attribute or
-    zero-argument method.  The resolved value is coerced to ``str``.
+    Each element of *val* is a two-element list `[VAR_NAME, PATH_ATTR]`
+    where `PATH_ATTR` names a :class:`~pathlib.Path` attribute or
+    zero-argument method.  The resolved value is coerced to `str`.
 
     Args:
         p: The :class:`~pathlib.Path` for the current result item.
-        val: A list of ``[variable_name, path_attribute]`` pairs supplied via
-            ``--result-var`` on the command line, or ``None`` when the option
+        val: A list of `[variable_name, path_attribute]` pairs supplied via
+            `--result-var` on the command line, or `None` when the option
             was not provided.
 
     Returns:
-        A ``{variable_name: resolved_str_value}`` dict, or ``None`` when
-        *val* is ``None``.  When a ``path_attribute`` name is not a valid
-        :class:`~pathlib.Path` attribute the raw ``VALUE`` string is used
-        as-is rather than raising.  For ``csv`` and ``json`` formats see
+        A `{variable_name: resolved_str_value}` dict, or `None` when
+        *val* is `None`.  When a `path_attribute` name is not a valid
+        :class:`~pathlib.Path` attribute the raw `VALUE` string is used
+        as-is rather than raising.  For `csv` and `json` formats see
         :func:`parse_result_vars_from_row`.
     """
     if val is None:
@@ -319,22 +319,22 @@ def parse_result_vars_from_row(
 ) -> dict[str, str] | None:
     """Build per-result variables by looking up keys in a parsed row dict.
 
-    Each element of *val* is a two-element list ``[VAR_NAME, ROW_KEY]``.
+    Each element of *val* is a two-element list `[VAR_NAME, ROW_KEY]`.
     For each pair, *ROW_KEY* is looked up in *row*; if the key is present
     its value is used.  If *ROW_KEY* is not present in *row*, the raw
     *ROW_KEY* string is used as-is.  This mirrors the fallback behaviour of
-    :func:`parse_result_vars` for the ``path`` format.
+    :func:`parse_result_vars` for the `path` format.
 
     Args:
-        row: The parsed row dict from a ``csv`` or ``json`` input item.
-        val: A list of ``[variable_name, row_key]`` pairs supplied via
-            ``--result-var`` on the command line, or ``None`` when the
+        row: The parsed row dict from a `csv` or `json` input item.
+        val: A list of `[variable_name, row_key]` pairs supplied via
+            `--result-var` on the command line, or `None` when the
             option was not provided.
 
     Returns:
-        A ``{variable_name: value}`` dict, or ``None`` when *val* is
-        ``None``.  A ``None`` return value signals callers to omit the
-        ``variables`` key from the result item entirely.
+        A `{variable_name: value}` dict, or `None` when *val* is
+        `None`.  A `None` return value signals callers to omit the
+        `variables` key from the result item entirely.
     """
     if val is None:
         return None
@@ -342,21 +342,21 @@ def parse_result_vars_from_row(
 
 
 def parse_mods(val: list[list[str]] | None) -> list[Mod]:
-    """Convert argparse ``--mod`` triples into :class:`~result_item.Mod` instances.
+    """Convert argparse `--mod` triples into :class:`~result_item.Mod` instances.
 
     Used for upfront validation of modifier key combos before any rows are
-    processed.  The ``arg`` field is taken as a raw string here; for
-    per-row ``arg`` resolution against row keys or :class:`~pathlib.Path`
+    processed.  The `arg` field is taken as a raw string here; for
+    per-row `arg` resolution against row keys or :class:`~pathlib.Path`
     attributes use :func:`build_mods_for_row` instead.
 
     Args:
-        val: A list of ``[mod_key, arg, subtitle]`` triples supplied via
-            ``--mod`` on the command line, or ``None`` when the option was
+        val: A list of `[mod_key, arg, subtitle]` triples supplied via
+            `--mod` on the command line, or `None` when the option was
             not provided.
 
     Returns:
-        A list of :class:`~result_item.Mod` objects with ``valid=True``, or
-        an empty list when *val* is ``None``.
+        A list of :class:`~result_item.Mod` objects with `valid=True`, or
+        an empty list when *val* is `None`.
 
     Raises:
         ValueError: If any *mod_key* is not a recognized Alfred modifier combo
@@ -376,7 +376,7 @@ def resolve_mod_arg(
     row: dict[str, str] | None = None,
     path: Path | None = None,
 ) -> str:
-    """Resolve a mod ``arg`` value against a row dict or a Path object.
+    """Resolve a mod `arg` value against a row dict or a Path object.
 
     Applies the same lookup-then-fallback strategy used by
     :func:`parse_result_vars` and :func:`parse_result_vars_from_row`:
@@ -386,15 +386,15 @@ def resolve_mod_arg(
     * If *path* is provided: try to resolve *arg* as a
       :class:`~pathlib.Path` attribute via :func:`get_path_attribute`; use
       the raw string if the attribute does not exist.
-    * If neither is provided: return *arg* as-is (used for the ``string``
+    * If neither is provided: return *arg* as-is (used for the `string`
       format where no structured data is available).
 
     Only one of *row* or *path* should be supplied per call.
 
     Args:
-        arg: The raw ``arg`` string from a ``--mod`` triple.
-        row: A parsed row dict from a ``csv`` or ``json`` input item.
-        path: The :class:`~pathlib.Path` for the current ``path``-format item.
+        arg: The raw `arg` string from a `--mod` triple.
+        row: A parsed row dict from a `csv` or `json` input item.
+        path: The :class:`~pathlib.Path` for the current `path`-format item.
 
     Returns:
         The resolved argument string.
@@ -415,24 +415,24 @@ def build_mods_for_row(
     row: dict[str, str] | None = None,
     path: Path | None = None,
 ) -> list[Mod]:
-    """Build per-row :class:`~result_item.Mod` instances with resolved ``arg`` values.
+    """Build per-row :class:`~result_item.Mod` instances with resolved `arg` values.
 
-    Iterates the ``--mod`` triples and resolves each ``arg`` value via
+    Iterates the `--mod` triples and resolves each `arg` value via
     :func:`resolve_mod_arg` before constructing the :class:`~result_item.Mod`.
-    This allows the ``arg`` to reference a row column/key (for ``csv`` and
-    ``json`` formats) or a :class:`~pathlib.Path` attribute (for the ``path``
+    This allows the `arg` to reference a row column/key (for `csv` and
+    `json` formats) or a :class:`~pathlib.Path` attribute (for the `path`
     format), falling back to the raw string in both cases.
 
     Args:
-        val: A list of ``[mod_key, arg, subtitle]`` triples supplied via
-            ``--mod`` on the command line, or ``None`` when the option was
+        val: A list of `[mod_key, arg, subtitle]` triples supplied via
+            `--mod` on the command line, or `None` when the option was
             not provided.
-        row: A parsed row dict from a ``csv`` or ``json`` input item.
-        path: The :class:`~pathlib.Path` for the current ``path``-format item.
+        row: A parsed row dict from a `csv` or `json` input item.
+        path: The :class:`~pathlib.Path` for the current `path`-format item.
 
     Returns:
-        A list of :class:`~result_item.Mod` objects with ``valid=True``, or
-        an empty list when *val* is ``None``.
+        A list of :class:`~result_item.Mod` objects with `valid=True`, or
+        an empty list when *val* is `None`.
 
     Raises:
         ValueError: If any *mod_key* is not a recognized Alfred modifier combo
@@ -456,7 +456,7 @@ def create_parser() -> argparse.ArgumentParser:
 
     Returns:
         A fully configured :class:`argparse.ArgumentParser` instance ready
-        for ``parse_args()``.
+        for `parse_args()`.
     """
     parser = argparse.ArgumentParser(
         description=(
@@ -531,25 +531,25 @@ def main(argv: Sequence[str] | None = None) -> int:
     Processing steps:
 
     1. Parse command-line arguments.
-    2. Read input from stdin or a positional ``FILE`` argument according to
-       ``--input-format`` (``path``, ``csv``, ``json``, or ``string``).
-    3. Optionally parse ``--session-var`` pairs into top-level variables.
-    4. Validate ``--mod`` key combos upfront via :func:`parse_mods`.
+    2. Read input from stdin or a positional `FILE` argument according to
+       `--input-format` (`path`, `csv`, `json`, or `string`).
+    3. Optionally parse `--session-var` pairs into top-level variables.
+    4. Validate `--mod` key combos upfront via :func:`parse_mods`.
     5. For each input row: construct a :class:`~result_item.ResultItem`
-       (via :meth:`~result_item.ResultItem.from_path` for ``path`` format,
-       or directly for ``csv``, ``json``, and ``string`` formats) and collect it.
-       For ``path``, ``csv``, and ``json``, ``--result-var`` values and
-       ``--mod`` ``ARG`` values are resolved per item against Path attributes
+       (via :meth:`~result_item.ResultItem.from_path` for `path` format,
+       or directly for `csv`, `json`, and `string` formats) and collect it.
+       For `path`, `csv`, and `json`, `--result-var` values and
+       `--mod` `ARG` values are resolved per item against Path attributes
        or row keys respectively, falling back to the raw string.
     6. Serialize to JSON and print to stdout.
 
     Args:
-        argv: Command-line argument list.  Defaults to ``sys.argv[1:]`` when
-            ``None``.
+        argv: Command-line argument list.  Defaults to `sys.argv[1:]` when
+            `None`.
 
     Returns:
-        ``0`` on success.  Non-zero exit codes are produced via
-        :func:`argparse.ArgumentParser.error` (which calls ``sys.exit(2)``).
+        `0` on success.  Non-zero exit codes are produced via
+        :func:`argparse.ArgumentParser.error` (which calls `sys.exit(2)`).
     """
     parser = create_parser()
     args = parser.parse_args(argv)

@@ -4,9 +4,9 @@ args
 Type aliases for Alfred Script Filter argument values.
 
 Alfred's JSON schema allows both a single string and an array of strings in
-several places (``arg``, ``action``, modifier ``arg``).  ``ArgValue`` captures
+several places (`arg`, `action`, modifier `arg`).  `ArgValue` captures
 that union so callers and type checkers get the correct type without repeating
-the ``str | Sequence[str]`` expression throughout the codebase.
+the `str | Sequence[str]` expression throughout the codebase.
 """
 
 from __future__ import annotations

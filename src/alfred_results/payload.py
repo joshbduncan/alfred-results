@@ -3,7 +3,7 @@ payload
 -------
 Alfred Script Filter top-level JSON payload.
 
-Defines :class:`ScriptFilterCache` (the optional ``"cache"`` sub-object) and
+Defines :class:`ScriptFilterCache` (the optional `"cache"` sub-object) and
 :class:`ScriptFilterPayload` (the complete top-level Script Filter response).
 
 Minimal Script Filter JSON example::
@@ -48,22 +48,22 @@ _RERUN_MAX: float = 5.0
 
 @dataclass(slots=True)
 class ScriptFilterCache:
-    """Alfred Script Filter ``cache`` sub-object.
+    """Alfred Script Filter `cache` sub-object.
 
     Controls how Alfred caches Script Filter results between invocations.
     When attached to a :class:`ScriptFilterPayload`, Alfred will reuse the
-    previous result set for ``seconds`` seconds before re-running the script.
+    previous result set for `seconds` seconds before re-running the script.
 
     Attributes:
         seconds: How long Alfred should cache results, in seconds.  Must be
-            between ``5`` and ``86400`` (24 hours) inclusive.
-        loosereload: When ``True``, Alfred will attempt to show cached results
+            between `5` and `86400` (24 hours) inclusive.
+        loosereload: When `True`, Alfred will attempt to show cached results
             immediately while re-running the script in the background.  When
-            ``False`` (or omitted), Alfred waits for a fresh result before
+            `False` (or omitted), Alfred waits for a fresh result before
             displaying anything.
 
     Raises:
-        ValueError: If ``seconds`` is outside the range 5–86400.
+        ValueError: If `seconds` is outside the range 5–86400.
 
     Example::
 
@@ -79,7 +79,7 @@ class ScriptFilterCache:
         """Validate field constraints after dataclass initialization.
 
         Raises:
-            ValueError: If ``seconds`` is not between 5 and 86400 inclusive.
+            ValueError: If `seconds` is not between 5 and 86400 inclusive.
         """
         if not (_CACHE_SECONDS_MIN <= self.seconds <= _CACHE_SECONDS_MAX):
             raise ValueError(
@@ -88,11 +88,11 @@ class ScriptFilterCache:
             )
 
     def to_dict(self) -> dict[str, Any]:
-        """Serialize to Alfred's ``cache`` object shape.
+        """Serialize to Alfred's `cache` object shape.
 
         Returns:
-            A JSON-serializable dict with ``"seconds"`` always present and
-            ``"loosereload"`` included only when explicitly set.
+            A JSON-serializable dict with `"seconds"` always present and
+            `"loosereload"` included only when explicitly set.
 
         Example::
 
@@ -119,8 +119,8 @@ class ScriptFilterPayload:
     Attributes:
         cache: Optional caching configuration; see :class:`ScriptFilterCache`.
         rerun: If set, Alfred will automatically re-run the script after this
-            many seconds.  Must be between ``0.1`` and ``5.0`` inclusive.
-        skipknowledge: When ``True``, Alfred will not apply its learned
+            many seconds.  Must be between `0.1` and `5.0` inclusive.
+        skipknowledge: When `True`, Alfred will not apply its learned
             ordering to the result list for this invocation.
         variables: Top-level Alfred session variables available to all
             downstream workflow objects when any item from this payload is
@@ -129,7 +129,7 @@ class ScriptFilterPayload:
             objects to display in Alfred's result list.
 
     Raises:
-        ValueError: If ``rerun`` is set but outside the range 0.1–5.0.
+        ValueError: If `rerun` is set but outside the range 0.1–5.0.
 
     Example::
 
@@ -151,7 +151,7 @@ class ScriptFilterPayload:
         """Validate field constraints after dataclass initialization.
 
         Raises:
-            ValueError: If ``rerun`` is set but not between 0.1 and 5.0.
+            ValueError: If `rerun` is set but not between 0.1 and 5.0.
         """
         if self.rerun is not None and not (_RERUN_MIN <= self.rerun <= _RERUN_MAX):
             raise ValueError(
@@ -169,9 +169,9 @@ class ScriptFilterPayload:
     ) -> ScriptFilterPayload:
         """Build a single-item informational payload.
 
-        Convenience factory that wraps ``title`` and an optional ``subtitle``
+        Convenience factory that wraps `title` and an optional `subtitle`
         in a non-actionable :class:`~alfred_results.result_item.ResultItem`
-        (``valid=False``) and returns a :class:`ScriptFilterPayload` containing
+        (`valid=False`) and returns a :class:`ScriptFilterPayload` containing
         only that item.  Intended for surfaces where the script needs to
         communicate a status or message to the user through Alfred's result
         list, such as "No results found" or "Connection failed".
@@ -181,7 +181,7 @@ class ScriptFilterPayload:
             subtitle: Optional secondary text shown below the title.  An empty
                 string (the default) is treated as unset and omitted from the
                 serialized JSON.
-            icon: Optional icon to display next to the row.  When ``None``
+            icon: Optional icon to display next to the row.  When `None`
                 (the default) no icon key is emitted.
 
         Returns:
@@ -215,7 +215,7 @@ class ScriptFilterPayload:
         """Serialize to Alfred's Script Filter top-level JSON shape as a dict.
 
         Builds the top-level dict that Alfred's Script Filter expects.  Only
-        fields that have been explicitly set (i.e. are not ``None``) are
+        fields that have been explicitly set (i.e. are not `None`) are
         included.  To produce the final JSON string for Alfred, use
         :meth:`to_json` instead.
 
@@ -270,8 +270,8 @@ class ScriptFilterPayload:
 
         Args:
             **kwargs: Keyword arguments forwarded to :func:`json.dumps`
-                (e.g. ``indent=2``, ``sort_keys=True``,
-                ``separators=(",", ":")``)
+                (e.g. `indent=2`, `sort_keys=True`,
+                `separators=(",", ":")`)
 
         Returns:
             A JSON string conforming to the Alfred Script Filter top-level

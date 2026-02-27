@@ -4,7 +4,7 @@ item
 Alfred Script Filter result item types.
 
 Defines :class:`ItemType` (how Alfred treats a result row) and
-:class:`ResultItem` (a single entry in Alfred's ``"items"`` array).
+:class:`ResultItem` (a single entry in Alfred's `"items"` array).
 
 Minimal Script Filter JSON example::
 
@@ -55,10 +55,10 @@ class ItemType(StrEnum):
 
 @dataclass(slots=True)
 class ResultItem:
-    """A single row in Alfred's Script Filter ``items`` array.
+    """A single row in Alfred's Script Filter `items` array.
 
     Only :attr:`title` is required by Alfred's schema.  All other fields are
-    optional; unset fields (``None``) are omitted from the serialized JSON
+    optional; unset fields (`None`) are omitted from the serialized JSON
     produced by :meth:`to_dict`.
 
     Attributes:
@@ -72,8 +72,8 @@ class ResultItem:
         arg: The argument passed to the next action in Alfred's workflow when
             this item is actioned.  Accepts either a single string or a list
             of strings (see :data:`~alfred_results.result_item.ArgValue`).
-        valid: Controls whether the item can be actioned.  ``True`` (default
-            when omitted) allows actioning; ``False`` turns the item into a
+        valid: Controls whether the item can be actioned.  `True` (default
+            when omitted) allows actioning; `False` turns the item into a
             non-actionable label row (useful for section headers or error
             messages).
         autocomplete: The string inserted into Alfred's search field when the
@@ -95,10 +95,10 @@ class ResultItem:
             would silently overwrite each other.
         action: The Universal Action payload passed to Alfred when the item is
             actioned via Universal Actions.  Can be a string, a list of
-            strings, or a typed mapping (``{"file": [...], "url": [...]}``)
+            strings, or a typed mapping (`{"file": [...], "url": [...]}`)
             following Alfred's Universal Actions schema.
         text: Copy/paste and Large Type overrides.  Expected keys are
-            ``"copy"`` (text placed on the clipboard) and ``"largetype"``
+            `"copy"` (text placed on the clipboard) and `"largetype"`
             (text displayed in Large Type mode).
         quicklookurl: URL or file path opened when the user invokes Quick Look
             on this result (Shift or Cmd+Y).
@@ -171,25 +171,25 @@ class ResultItem:
         """Construct a :class:`ResultItem` from a filesystem path.
 
         Handles the boilerplate of building a fully-populated result item from
-        a path: expanding ``~``, resolving symlinks, deriving a stable UUID
-        ``uid``, setting ``title``, ``subtitle``, ``arg``, ``icon``, and
-        ``type`` automatically.
+        a path: expanding `~`, resolving symlinks, deriving a stable UUID
+        `uid`, setting `title`, `subtitle`, `arg`, `icon`, and
+        `type` automatically.
 
-        The default ``variables`` dict always contains ``"_path"`` (the POSIX
-        representation of the input path) and ``"_parent"`` (the POSIX path of
-        the parent directory).  Pass an explicit ``variables`` mapping to merge
+        The default `variables` dict always contains `"_path"` (the POSIX
+        representation of the input path) and `"_parent"` (the POSIX path of
+        the parent directory).  Pass an explicit `variables` mapping to merge
         additional keys or override the defaults; user-supplied values win on
         collision.
 
         Args:
             path: The filesystem path to convert.  May be a :class:`~pathlib.Path`
-                object or a string (including ``~``-prefixed paths).
+                object or a string (including `~`-prefixed paths).
             mods: Optional list of :class:`~alfred_results.result_item.Mod`
                 modifier-key overrides to attach to the item.
             variables: Optional item-scoped Alfred session variables merged over
-                the defaults (``{"_path": ..., "_parent": ...}``) when provided.
-                Defaults to the built-in ``_path`` and ``_parent`` keys when
-                ``None``.
+                the defaults (`{"_path": ..., "_parent": ...}`) when provided.
+                Defaults to the built-in `_path` and `_parent` keys when
+                `None`.
 
         Returns:
             A fully-populated :class:`ResultItem` ready for serialization via
@@ -239,13 +239,13 @@ class ResultItem:
     def to_dict(self) -> dict[str, Any]:
         """Serialize this item to Alfred's Script Filter JSON shape.
 
-        Builds the dict that represents one entry in Alfred's ``"items"``
+        Builds the dict that represents one entry in Alfred's `"items"`
         array.  Only fields that have been explicitly set (i.e. are not
-        ``None``) are included; this keeps the JSON output minimal and avoids
+        `None`) are included; this keeps the JSON output minimal and avoids
         sending unexpected keys to Alfred.
 
-        The ``mods`` list is converted to a dict keyed by modifier combo
-        string (e.g. ``{"cmd": {...}, "alt+shift": {...}}``), matching
+        The `mods` list is converted to a dict keyed by modifier combo
+        string (e.g. `{"cmd": {...}, "alt+shift": {...}}`), matching
         Alfred's expected schema.
 
         Returns:

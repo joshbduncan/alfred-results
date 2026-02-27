@@ -5,7 +5,7 @@ Alfred Script Filter modifier-key override types.
 
 Defines :data:`VALID_MODIFIER_KEYS`, the :func:`valid_modifiers` helper, and
 the :class:`Mod` dataclass that represents one entry inside a result item's
-``"mods"`` dict.
+`"mods"` dict.
 
 Alfred modifier JSON example::
 
@@ -42,17 +42,17 @@ def valid_modifiers(modifier_keys: list[str] | None = None) -> set[str]:
     """Return the complete set of allowed modifier combo strings.
 
     Alfred accepts the five base modifier keys and any ordered combination of
-    up to three of them joined with ``"+"``.  Both orderings of a two-key
-    combo are considered distinct valid strings (e.g. ``"cmd+alt"`` and
-    ``"alt+cmd"`` are each valid).
+    up to three of them joined with `"+"`.  Both orderings of a two-key
+    combo are considered distinct valid strings (e.g. `"cmd+alt"` and
+    `"alt+cmd"` are each valid).
 
     Args:
         modifier_keys: Keys to use as the base vocabulary.  Defaults to
-            :data:`VALID_MODIFIER_KEYS` when ``None`` or empty.
+            :data:`VALID_MODIFIER_KEYS` when `None` or empty.
 
     Returns:
         A set of all valid combo strings for the given keys, including all
-        1-, 2-, and 3-element ordered permutations joined by ``"+"``.
+        1-, 2-, and 3-element ordered permutations joined by `"+"`.
 
     Example::
 
@@ -73,7 +73,7 @@ _VALID_MOD_COMBOS: Final[set[str]] = valid_modifiers()
 
 @dataclass(slots=True)
 class Mod:
-    """An Alfred modifier-key override entry inside a result item's ``mods`` dict.
+    """An Alfred modifier-key override entry inside a result item's `mods` dict.
 
     Each :class:`Mod` represents the behavior change that occurs when the
     user holds a specific modifier key (or combination) while the result row
@@ -81,13 +81,13 @@ class Mod:
     output of :meth:`to_dict` as its value.
 
     Attributes:
-        key: The modifier combo string used as the JSON key in ``"mods"``.
+        key: The modifier combo string used as the JSON key in `"mods"`.
             Must be one of the valid single- or multi-key combos accepted by
-            Alfred (e.g. ``"cmd"``, ``"alt"``, ``"cmd+shift"``).  Valid
+            Alfred (e.g. `"cmd"`, `"alt"`, `"cmd+shift"`).  Valid
             combos are any 1–3-element ordered permutation of
-            ``("cmd", "alt", "ctrl", "shift", "fn")`` joined with ``"+"``.
+            `("cmd", "alt", "ctrl", "shift", "fn")` joined with `"+"`.
         valid: Overrides the parent item's actionability for this modifier.
-            ``True`` allows actioning; ``False`` makes the item non-actionable
+            `True` allows actioning; `False` makes the item non-actionable
             when the modifier is held.
         arg: The argument passed downstream when the user actions the item
             while holding this modifier.  Overrides the parent item's
@@ -131,12 +131,12 @@ class Mod:
         """Serialize to the Alfred mod dict (the value under the mod key).
 
         Builds the dict that Alfred assigns to :attr:`key` inside a result
-        item's ``"mods"`` object.  Only non-``None`` fields are included.
+        item's `"mods"` object.  Only non-`None` fields are included.
 
         Returns:
-            A JSON-serializable dict with any subset of ``"valid"``, ``"arg"``,
-            ``"subtitle"``, ``"icon"``, and ``"variables"`` that are set on
-            this instance.  Returns an empty dict ``{}`` when no fields are set.
+            A JSON-serializable dict with any subset of `"valid"`, `"arg"`,
+            `"subtitle"`, `"icon"`, and `"variables"` that are set on
+            this instance.  Returns an empty dict `{}` when no fields are set.
 
         Example::
 
