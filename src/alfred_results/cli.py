@@ -3,10 +3,9 @@ cli
 ---
 Command-line interface for alfred-results.
 
-Reads a list of filesystem paths from stdin or a file, converts each path into
-an Alfred Script Filter result item via :class:`~alfred_results.result_item.ResultItem`,
-and writes the complete Script Filter JSON payload to stdout via
-:class:`~alfred_results.payload.ScriptFilterPayload`.
+Reads input from stdin or a file in one of four formats (`path`, `csv`,
+`json`, or `string`) and writes the complete Script Filter JSON payload to
+stdout via :class:`~alfred_results.payload.ScriptFilterPayload`.
 
 Alfred Script Filters are workflow nodes that run a script and read its stdout
 as a JSON payload describing a list of result items to display in Alfred's UI.
@@ -355,12 +354,13 @@ def parse_mods(val: list[list[str]] | None) -> list[Mod]:
             not provided.
 
     Returns:
-        A list of :class:`~result_item.Mod` objects with `valid=True`, or
-        an empty list when *val* is `None`.
+        A list of :class:`~alfred_results.result_item.Mod` objects with
+        `valid=True`, or an empty list when *val* is `None`.
 
     Raises:
         ValueError: If any *mod_key* is not a recognized Alfred modifier combo
-            (propagated from :class:`~result_item.Mod.__post_init__`).
+            (propagated from
+            :class:`~alfred_results.result_item.Mod.__post_init__`).
     """
     if val is None:
         return []
@@ -499,8 +499,9 @@ def create_parser() -> argparse.ArgumentParser:
         action="append",
         metavar=("KEY", "VALUE"),
         help=(
-            "alfred result item variable from pathlib Path object"
-            " (ex. --result-var path as_posix)"
+            "add an item-scoped variable; VALUE is resolved as a Path attribute"
+            " (path format) or row key (csv/json format), falling back to the"
+            " raw string (ex. --result-var ext suffix)"
         ),
     )
 
@@ -588,6 +589,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     title = row.get("title")
                     if title is None:
                         parser.error("csv input requires a 'title' column in every row")
+                    assert title is not None
 
                     uid = row.get("uid")
                     subtitle = row.get("subtitle")
@@ -606,7 +608,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                             )
 
                     icon_path = row.get("icon")
-                    icon = Icon(icon_path) if icon_path is not None else None
+                    icon = Icon(path=icon_path) if icon_path else None
 
                     item_vars = parse_result_vars_from_row(row, args.result_var)
                     item_mods = build_mods_for_row(args.mod, row=row)
@@ -630,6 +632,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                         parser.error(
                             "json input requires a 'title' key in every object"
                         )
+                    assert title is not None
 
                     uid = row.get("uid")
                     subtitle = row.get("subtitle")
@@ -648,7 +651,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                             )
 
                     icon_path = row.get("icon")
-                    icon = Icon(icon_path) if icon_path is not None else None
+                    icon = Icon(path=icon_path) if icon_path else None
 
                     item_vars = parse_result_vars_from_row(row, args.result_var)
                     item_mods = build_mods_for_row(args.mod, row=row)
@@ -665,7 +668,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                     items.append(item)
             case "string":
                 data = parse_input_lines(args.file)
-                item_vars = dict(args.result_var) if args.result_var is not None else {}
+                item_vars: dict[str, str] | None = (
+                    dict(args.result_var) if args.result_var is not None else None
+                )
 
                 for line in data:
                     item = ResultItem(title=line, mods=mods, variables=item_vars)

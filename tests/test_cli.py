@@ -513,6 +513,23 @@ class TestMainCsvFormat:
         assert payload["items"][0]["mods"]["cmd"]["arg"] == "https://github.com"
         assert payload["items"][1]["mods"]["cmd"]["arg"] == "https://pypi.org"
 
+    def test_blank_icon_column_omitted(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        # An empty icon cell must not produce {"icon": {"path": ""}} in the output
+        f = tmp_path / "data.csv"
+        f.write_text("title,icon\nfoo,\n")
+        payload = run(["-f", "csv", str(f)], capsys)
+        assert "icon" not in payload["items"][0]
+
+    def test_icon_column_used_when_present(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        f = tmp_path / "data.csv"
+        f.write_text("title,icon\nfoo,./icons/star.png\n")
+        payload = run(["-f", "csv", str(f)], capsys)
+        assert payload["items"][0]["icon"] == {"path": "./icons/star.png"}
+
 
 # ---------------------------------------------------------------------------
 # main() — json format
@@ -613,6 +630,23 @@ class TestMainJsonFormat:
         assert payload["items"][0]["mods"]["cmd"]["arg"] == "https://github.com"
         assert payload["items"][1]["mods"]["cmd"]["arg"] == "https://pypi.org"
 
+    def test_blank_icon_key_omitted(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        # An empty icon value must not produce {"icon": {"path": ""}} in the output
+        f = tmp_path / "data.json"
+        f.write_text('[{"title": "foo", "icon": ""}]')
+        payload = run(["-f", "json", str(f)], capsys)
+        assert "icon" not in payload["items"][0]
+
+    def test_icon_key_used_when_present(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        f = tmp_path / "data.json"
+        f.write_text('[{"title": "foo", "icon": "./icons/star.png"}]')
+        payload = run(["-f", "json", str(f)], capsys)
+        assert payload["items"][0]["icon"] == {"path": "./icons/star.png"}
+
 
 # ---------------------------------------------------------------------------
 # main() — string format
@@ -648,6 +682,15 @@ class TestMainStringFormat:
             ["-f", "string", str(f), "--result-var", "source", "labels"], capsys
         )
         assert payload["items"][0]["variables"]["source"] == "labels"
+
+    def test_no_result_var_omits_variables_key(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        # Without --result-var, "variables" must be absent from each item
+        f = tmp_path / "labels.txt"
+        f.write_text("Hello\n")
+        payload = run(["-f", "string", str(f)], capsys)
+        assert "variables" not in payload["items"][0]
 
 
 # ---------------------------------------------------------------------------
