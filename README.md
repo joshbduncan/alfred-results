@@ -4,6 +4,9 @@ Turn paths, CSV rows, JSON objects, or plain strings into [Alfred Script Filter]
 
 Use it as a **CLI tool** (pipe data in, get Alfred JSON out) or as a **Python library** (build result items programmatically and compose them however you like). No runtime dependencies. Python ≥ 3.12.
 
+### 🤷‍♂️ Why?
+If you’ve built Alfred workflows, you know generating Script Filter JSON usually means brittle jq one-liners or hand-rolled dictionaries. alfred-results lets you generate correct, type-safe payloads from Python or the CLI, without boilerplate or guesswork.
+
 ---
 
 ## Installation
@@ -306,7 +309,7 @@ alfred-results --input-format csv data.csv \
 ### Quick start
 
 ```python
-from alfred_results.payload import ScriptFilterPayload
+from alfred_results import ScriptFilterPayload
 from alfred_results.result_item import ResultItem
 
 items = [
@@ -463,7 +466,7 @@ Valid modifier keys: `cmd`, `alt`, `ctrl`, `shift`, `fn`, any 1–3 key ordered 
 `ScriptFilterPayload` wraps your items into the complete top-level Alfred Script Filter response:
 
 ```python
-from alfred_results.payload import ScriptFilterCache, ScriptFilterPayload
+from alfred_results import ScriptFilterCache, ScriptFilterPayload
 from alfred_results.result_item import ResultItem
 
 payload = ScriptFilterPayload(
@@ -510,7 +513,7 @@ data = payload.to_dict()
 `ScriptFilterPayload.info()` builds a single-item payload containing a non-actionable result (`valid=False`). Use it to communicate a status or message to the user through Alfred's result list — "No results found", "Connection failed", or anything similar.
 
 ```python
-from alfred_results.payload import ScriptFilterPayload
+from alfred_results import ScriptFilterPayload
 
 # Title only
 payload = ScriptFilterPayload.info("No results found")
@@ -538,7 +541,7 @@ payload = ScriptFilterPayload.info(
 Pass a custom icon with the keyword-only `icon` argument:
 
 ```python
-from alfred_results.payload import ScriptFilterPayload
+from alfred_results import ScriptFilterPayload
 from alfred_results.result_item import Icon
 
 payload = ScriptFilterPayload.info(
@@ -557,7 +560,7 @@ payload = ScriptFilterPayload.info(
 `ScriptFilterCache` controls how Alfred caches results between script invocations:
 
 ```python
-from alfred_results.payload import ScriptFilterCache
+from alfred_results import ScriptFilterCache
 
 # Cache for 5 minutes, show stale results immediately while reloading
 ScriptFilterCache(seconds=300, loosereload=True)

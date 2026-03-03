@@ -1,11 +1,32 @@
 [project]
 name = "alfred-results"
 version = "0.1.0"
-description = "Helper package for working with Alfred app workflows."
+description = "Build Alfred Script Filter JSON payloads from paths, CSV, JSON, or strings. CLI and Python API included."
 readme = "README.md"
 authors = [{ name = "Josh Duncan", email = "joshbduncan@gmail.com" }]
 requires-python = ">=3.12"
+keywords = ["alfred", "script-filter", "workflow", "automation", "macos"]
+license = "MIT"
+classifiers = [
+    "Environment :: MacOS X",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Utilities",
+    "Typing :: Typed",
+]
 dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/joshbduncan/alfred-results"
+Documentation = "https://github.com/joshbduncan/alfred-results/wiki"
+Repository = "https://github.com/joshbduncan/alfred-results.git"
+Changelog = "https://github.com/joshbduncan/alfred-results/blob/main/CHANGELOG.md"
+"Bug Tracker" = "https://github.com/joshbduncan/alfred-results/issues"
 
 [project.scripts]
 alfred-results = "alfred_results.cli:main"
@@ -16,6 +37,7 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "pre-commit>=4.5.1",
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
     "ruff>=0.15.0",
