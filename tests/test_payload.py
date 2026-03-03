@@ -43,7 +43,7 @@ class TestScriptFilterPayload:
         result = ScriptFilterPayload().to_dict()
         assert "variables" in result
         assert "script" in result["variables"]
-        assert "version" in result["variables"]
+        assert "version" not in result["variables"]
 
     def test_items_serialized(self) -> None:
         items = [ResultItem(title="foo"), ResultItem(title="bar")]

@@ -95,8 +95,7 @@ mdfind -onlyin ~ "kind:pdf" | alfred-results
 ```json
 {
   "variables": {
-    "script": "alfred-results",
-    "version": "0.1.0"
+    "script": "alfred-results"
   },
   "items": [
     {
@@ -242,7 +241,6 @@ echo "/tmp/foo" | alfred-results \
 {
   "variables": {
     "script": "alfred-results",
-    "version": "0.1.0",
     "source": "file-browser",
     "mode": "open"
   },
@@ -497,14 +495,13 @@ data = payload.to_dict()
   "skipknowledge": true,
   "variables": {
     "script": "alfred-results",
-    "version": "0.1.0",
     "workflow": "file-browser"
   },
   "items": [...]
 }
 ```
 
-> 💡 `script` and `version` are always injected into `variables` automatically so downstream workflow objects always know what generated the payload. User-supplied variables win on collision.
+> 💡 `script` is always injected into `variables` automatically so downstream workflow objects always know what generated the payload. User-supplied variables win on collision.
 
 ---
 
@@ -522,7 +519,7 @@ print(payload.to_json())
 
 ```json
 {
-  "variables": {"script": "alfred-results", "version": "0.1.0"},
+  "variables": {"script": "alfred-results"},
   "items": [
     {"title": "No results found", "valid": false}
   ]

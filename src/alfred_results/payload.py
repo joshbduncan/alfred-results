@@ -225,25 +225,29 @@ class ScriptFilterPayload:
             A JSON-serializable dict conforming to the Alfred Script Filter
             top-level payload schema.
 
+        The `variables` key is always present and includes `"script"` (the
+        installed package name, or `"alfred-results"` when the package is
+        vendored and not installed).  `"version"` is intentionally omitted
+        because :func:`importlib.metadata.version` raises
+        :exc:`~importlib.metadata.PackageNotFoundError` when the package is
+        vendored inside an Alfred workflow bundle rather than installed via pip.
+
         Example::
 
             payload = ScriptFilterPayload(items=[ResultItem(title="foo")])
             payload.to_dict()
-            # {"variables": {...}, "items": [{"title": "foo"}]}
+            # {"variables": {"script": "alfred-results"}, "items": [{"title": "foo"}]}
         """
-        from importlib.metadata import PackageNotFoundError, metadata, version
+        from importlib.metadata import PackageNotFoundError, metadata
 
         try:
             package_name = metadata(str(__package__))["Name"]
-            package_version = version(package_name)
         except PackageNotFoundError:
             package_name = "alfred-results"
-            package_version = ""
 
         # Default session variables are always emitted; user-supplied values win.
         default_session_variables: dict[str, str] = {
             "script": package_name,
-            "version": package_version,
         }
 
         data: dict[str, Any] = {}
