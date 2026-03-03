@@ -114,7 +114,9 @@ class ScriptFilterPayload:
 
     Wraps the full response sent from a Script Filter to Alfred.  Use
     :meth:`to_json` to produce the final JSON string for Alfred, or
-    :meth:`to_dict` to obtain a plain Python dict.
+    :meth:`to_dict` to obtain a plain Python dict.  Use :meth:`info` to build
+    a single-item informational payload without constructing a
+    :class:`~alfred_results.result_item.ResultItem` directly.
 
     Attributes:
         cache: Optional caching configuration; see :class:`ScriptFilterCache`.
